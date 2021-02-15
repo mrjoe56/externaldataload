@@ -24,6 +24,9 @@
   <classloader>
     <psr4 prefix="Civi\" path="Civi"/>
   </classloader>
+  <requires>
+    <ext>nihrbackbone</ext>
+  </requires>
   <civix>
     <namespace>CRM/Externaldataload</namespace>
   </civix>

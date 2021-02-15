@@ -1,0 +1,9 @@
+{
+  "__comment": "__this file is obsolete?",
+  "FirstName": "first_name",
+  "LastName": "last_name",
+  "Phone": "phone",
+  "Mobile": "mobile",
+  "Gender": "gender_id",
+  "Ethnicity": "ethnicity_id"
+}
