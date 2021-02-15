@@ -1338,13 +1338,16 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     $caseId = '';
 
     // check if recruitment case already exists
-    $params = [1 => [$contactId, 'Integer'],];
+    $params = [
+      1 => [Civi::service('nbrBackbone')->getRecruitmentCaseTypeName(), 'String'],
+      2 => [$contactId, 'Integer'],
+      ];
     $sql = "select cc.case_id
             from civicrm_case_contact cc, civicrm_case cas, civicrm_case_type cct
             where cc.case_id = cas.id
             and cas.case_type_id  = cct.id
-            and cct.name = " . Civi::service('nbrBackbone')->getRecruitmentCaseTypeName() . "
-            and contact_id = %1";
+            and cct.name = %1
+            and contact_id = %2";
 
     try {
       $caseId = CRM_Core_DAO::singleValueQuery($sql, $params);
@@ -1356,7 +1359,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       try {
         $result = civicrm_api3('NbrVolunteerCase', 'create', [
           'contact_id' => $contactId,
-          'case_type_id' => Civi::service('nbrBackbone')->getRecruitmentCaseTypeName(),
+          'case_type' => 'recruitment',
           'subject' => "Recruitment",
         ]);
         $caseId = $result['case_id'];
