@@ -112,7 +112,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ($this->_dataSource == 'ibd' && !isset($this->_mapping['pat_bio_no'])) ||
       ($this->_dataSource == 'strides' && !isset($this->_mapping['cih_type_strides_pid']) &&
           !isset($this->_mapping['cih_type_pack_id_din'])) ||
-      ($this->_dataSource == 'nafld' && !isset($this->_mapping['cih_type_packid']))) {
+      ($this->_dataSource == 'nafld' && !isset($this->_mapping['cih_type_packid'])) ||
+      ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id']))
+    ) {
         $this->_logger->logMessage('ERROR: ID column missing for ' . $this->_dataSource . ' data not loaded', 'error');
     }
     elseif (!isset($this->_mapping['panel'])) {
@@ -229,6 +231,19 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addAlias($contactId, 'cih_type_blood_donor_id', $data['cih_type_blood_donor_id'], 2);
           }
 
+          // NAFLD
+          if (!empty($data['cih_type_nafld_br'])) {
+            $this->addAlias($contactId, 'cih_type_nafld_br', $data['cih_type_nafld_br'], 2);
+          }
+
+          // GLAD
+          if (!empty($data['cih_type_glad_id'])) {
+            $this->addAlias($contactId, 'cih_type_glad_id', $data['cih_type_glad_id'], 2);
+          }
+          if (!empty($data['cih_type_slam'])) {
+            $this->addAlias($contactId, 'cih_type_slam', $data['cih_type_slam'], 2);
+          }
+
 
           if (isset($data['previous_names']) && !empty($data['previous_names'])) {
             $this->addAlias($contactId, 'cih_type_former_surname', $data['previous_names'], 2);
@@ -260,7 +275,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           // *** case exists and retrieve ID
           //$caseID = CRM_Nihrbackbone_NbrVolunteerCase::getActiveRecruitmentCaseId($contactId);
           //if (is_null($caseID)) {
-            $caseID = $this->createRecruitmentCase($contactId);
+          $caseID = $this->createRecruitmentCase($contactId, $data['consent_date']);
           //}
 
           // add consent to recruitment case
@@ -310,10 +325,21 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               CRM_Nihrbackbone_Utils::logMessage($this->_importId, $message, $this->_originalFileName, 'warning');
             }
           }
+
+          // *** tags
+          if (isset($data['temporarily_non_recallable'])) {
+            if ($data['temporarily_non_recallable'] == 'Yes') {
+              $this->addTag($contactId, 'Temporarily non-recallable');
+            }
+            elseif ($data['temporarily_non_recallable'] == 'No' || $data['temporarily_non_recallable'] == '') {
+              $this->removeTag($contactId, 'Temporarily non-recallable');
+            }
+          }
         }
       }
     }
   }
+
 
 
   /**
@@ -328,7 +354,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     // *** initialise with all fields
     foreach ($this->_mapping as $item) {
-      $mappedData[$item] = '';
+      if ($item <> 'temporarily_non_recallable') {
+        $mappedData[$item] = '';
+      }
     }
 
     foreach ($preMappingData as $key => $value) {
@@ -575,6 +603,16 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $this->_logger->logMessage('ERROR: No packID provided, no data loaded: ' . $data['last_name'], 'error');
         }
         break;
+      case "glad":
+        // cih_type_glad_id
+        if($data['cih_type_glad_id'] <> '') {
+          $identifier_type = 'cih_type_glad_id';
+          $identifier = $data['cih_type_glad_id'];
+        }
+        else {
+          $this->_logger->logMessage('ERROR: No GLAD ID provided, no data loaded: ' . $data['last_name'], 'error');
+        }
+        break;
       default:
         $this->_logger->logMessage('ERROR: no default mapping for ' . $this->_dataSource, 'error');
     }
@@ -601,6 +639,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         $data['id'] = $contactId;
         $new_volunteer = 0;
+
+        // check if surnames in database and data file match - if not, add existing surname to former
+        // names
+        if(isset($data['last_name']) && $data['last_name'] <> '') {
+          $dbLastName = civicrm_api3('Contact', 'getvalue', [
+            'return' => "last_name",
+            'id' => $contactId,
+          ]);
+          if ($dbLastName <> $data['last_name'] && $dbLastName <> '' && $dbLastName <> 'x') {
+            $this->addAlias($contactId, 'cih_type_former_surname', $dbLastName, 2);
+          }
+        }
       }
       else { // new record
         // for records with missing names (e.g. loading from sample receipts) a fake first name and surname needs to be added
@@ -652,35 +702,41 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   {
     // *** add or update volunteer email address
     if ($data['email'] <> '') {
-      // --- only add if not already on database either as mail or as former communication data
-      $query = "SELECT COUNT(*) as emailCount,
-        (SELECT COUNT(*) FROM civicrm_value_fcd_former_comm_data
-        WHERE entity_id = %1 AND fcd_communication_type = %2 AND fcd_details LIKE %3) AS fcdCount
-        FROM civicrm_email WHERE contact_id = %1 and email = %4";
-      $dao = CRM_Core_DAO::executeQuery($query, [
-        1 => [(int)$contactID, "Integer"],
-        2 => ["email", "String"],
-        3 => ["%" . $data['email'] . "%", "String"],
-        4 => [$data['email'], "String"],
-      ]);
-      if ($dao->fetch()) {
-        if ($dao->emailCount == 0 && $dao->fcdCount == 0) {
-          $primary = 0;
-          if (isset($data['is_primary']) && $data['is_primary'] == 1) {
-            $primary = 1;
+      // --- only add if the format is correct
+      if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        $this->_logger->logMessage('Error addEmail ' . $contactID . ': invalid format, not added ' . $data['email'], 'warning');
+      } else {
+
+        // --- only add if not already on database either as mail or as former communication data
+        $query = "SELECT COUNT(*) as emailCount,
+          (SELECT COUNT(*) FROM civicrm_value_fcd_former_comm_data
+          WHERE entity_id = %1 AND fcd_communication_type = %2 AND fcd_details LIKE %3) AS fcdCount
+          FROM civicrm_email WHERE contact_id = %1 and email = %4";
+        $dao = CRM_Core_DAO::executeQuery($query, [
+          1 => [(int)$contactID, "Integer"],
+          2 => ["email", "String"],
+          3 => ["%" . $data['email'] . "%", "String"],
+          4 => [$data['email'], "String"],
+        ]);
+        if ($dao->fetch()) {
+          if ($dao->emailCount == 0 && $dao->fcdCount == 0) {
+            $primary = 0;
+            if (isset($data['is_primary']) && $data['is_primary'] == 1) {
+              $primary = 1;
+            }
+            $location = Civi::service('nbrBackbone')->getHomeLocationTypeId();
+            if (isset($data['contact_location']) && $data['contact_location'] <> '') {
+              $location = $data['contact_location'];
+            }
+            $insert = "INSERT INTO civicrm_email (contact_id, location_type_id, email, is_primary, is_billing, is_bulkmail, on_hold)
+              VALUES(%1, %2, %3, %4, 0, 0, 0)";
+            CRM_Core_DAO::executeQuery($insert, [
+              1 => [(int)$contactID, "Integer"],
+              2 => [(int)$location, "Integer"],
+              3 => [$data['email'], "String"],
+              4 => [(int)$primary, "Integer"],
+            ]);
           }
-          $location = Civi::service('nbrBackbone')->getHomeLocationTypeId();
-          if (isset($data['contact_location']) && $data['contact_location'] <> '') {
-            $location = $data['contact_location'];
-          }
-          $insert = "INSERT INTO civicrm_email (contact_id, location_type_id, email, is_primary, is_billing, is_bulkmail, on_hold)
-            VALUES(%1, %2, %3, %4, 0, 0, 0)";
-          CRM_Core_DAO::executeQuery($insert, [
-            1 => [(int)$contactID, "Integer"],
-            2 => [(int)$location, "Integer"],
-            3 => [$data['email'], "String"],
-            4 => [(int)$primary, "Integer"],
-          ]);
         }
       }
     }
@@ -1282,6 +1338,46 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
   }
 
+  private function addTag($contactId, $tagName)
+  {
+    // add tag if not already exist
+    $cnt = civicrm_api3('EntityTag', 'getcount', [
+      'tag_id' => $tagName,
+      'contact_id' => $contactId,
+    ]);
+    if ($cnt == 0) {
+      try {
+        civicrm_api3('EntityTag', 'create', [
+          'tag_id' => $tagName,
+          'contact_id' => $contactId,
+        ]);
+      } catch (CiviCRM_API3_Exception $ex) {
+        $this->_logger->logMessage('Error adding tag ' . $tagName . ' to volunteer record ' . $contactId . ': ' . $ex->getMessage(), 'error');
+      }
+    }
+  }
+
+  private function removeTag($contactId, $tagName)
+  {
+    try {
+      // remove tag if exists
+      $result = civicrm_api3('EntityTag', 'get', [
+        'sequential' => 1,
+        'tag_id' => $tagName,
+        'contact_id' => $contactId,
+      ]);
+
+      if (isset($result['id'])) {
+        civicrm_api3('EntityTag', 'delete', [
+          'id' => $result['id'],
+          'contact_id' => $contactId,
+        ]);
+      }
+    } catch(CiviCRM_API3_Exception $ex) {
+      $this->_logger->logMessage('Error deleting tag ' . $tagName . ' on volunteer record ' . $contactId. ': ' . $ex->getMessage(), 'error');
+    }
+  }
+
   /**
    * Method to add an activity to the recruitment case
    *
@@ -1333,7 +1429,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @return mixed|string
    * @throws Exception
    */
-  private function createRecruitmentCase($contactId)
+  private function createRecruitmentCase($contactId, $consent_date = NULL)
   {
     $caseId = '';
 
@@ -1361,6 +1457,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'contact_id' => $contactId,
           'case_type' => 'recruitment',
           'subject' => "Recruitment",
+          'start_date' => $consent_date
         ]);
         $caseId = $result['case_id'];
         $message = E::ts('Recruitment case for volunteer ' . $contactId . '  added');
