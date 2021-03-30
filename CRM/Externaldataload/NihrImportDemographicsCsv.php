@@ -113,7 +113,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ($this->_dataSource == 'strides' && !isset($this->_mapping['cih_type_strides_pid']) &&
           !isset($this->_mapping['cih_type_pack_id_din'])) ||
       ($this->_dataSource == 'nafld' && !isset($this->_mapping['cih_type_packid'])) ||
-      ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id']))
+      ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id'])) ||
+      ($this->_dataSource == 'edgi' && !isset($this->_mapping['cih_type_edgi_id']))
     ) {
         $this->_logger->logMessage('ERROR: ID column missing for ' . $this->_dataSource . ' data not loaded', 'error');
     }
@@ -244,6 +245,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addAlias($contactId, 'cih_type_slam', $data['cih_type_slam'], 2);
           }
 
+          // EDGI (incl. slam ID above)
+          if (!empty($data['cih_type_edgi_id'])) {
+            $this->addAlias($contactId, 'cih_type_edgi_id', $data['cih_type_edgi_id'], 2);
+          }
 
           if (isset($data['previous_names']) && !empty($data['previous_names'])) {
             $this->addAlias($contactId, 'cih_type_former_surname', $data['previous_names'], 2);
@@ -455,6 +460,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_unable_to_travel', 'id');
       }
 
+      if ($newKey == 'non_recallable_reason') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerStatusCustomField('nvs_nonrecallable_reason', 'id');
+      }
+
+
       // todo don't use hardcoded
       if ($newKey == 'pack_id') {
         // todo $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerAliasCustomField('nva_ucl_br_local', 'id');
@@ -613,8 +623,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $this->_logger->logMessage('ERROR: No GLAD ID provided, no data loaded: ' . $data['last_name'], 'error');
         }
         break;
+      case "edgi":
+        // cih_type_edgi_id
+        if($data['cih_type_edgi_id'] <> '') {
+          $identifier_type = 'cih_type_edgi_id';
+          $identifier = $data['cih_type_edgi_id'];
+        }
+        else {
+          $this->_logger->logMessage('ERROR: No EDGI ID provided, no data loaded: ' . $data['last_name'], 'error');
+        }
+        break;
       default:
-        $this->_logger->logMessage('ERROR: no default mapping for ' . $this->_dataSource, 'error');
+        $this->_logger->logMessage('no default mapping for ' . $this->_dataSource, 'ERROR');
     }
 
     // only continue if identifier for project is provided
@@ -632,8 +652,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         // volunteer already exists
         // do not save data if volunteer is not active or pending
         if (!$volunteer->VolunteerStatusActiveOrPending($contactId, $this->_logger)) {
-          $this->_logger->logMessage('ERROR: volunteer ' . $identifier . ' (' . $contactId .
-            ') has status other than active or pending, no data loaded', 'warning');
+          $this->_logger->logMessage('volunteer ' . $identifier . ' (' . $contactId .
+            ') has status other than active or pending, no data loaded', 'WARNING');
           return array(0, 0);
         }
 
@@ -648,10 +668,17 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             'id' => $contactId,
           ]);
           if ($dbLastName <> $data['last_name'] && $dbLastName <> '' && $dbLastName <> 'x') {
-            $this->addAlias($contactId, 'cih_type_former_surname', $dbLastName, 2);
+            if ($this->checkFormerSurname($contactId, $data['last_name']) > 0) {
+              // surname is already stored as former surname - don't overwrite in this case
+              $data['last_name'] = $dbLastName;
+              $this->_logger->logMessage("$identifier ($contactId): surname already stored as 'former', not overwritten", 'WARNING');
+            }
+            else {
+              $this->addAlias($contactId, 'cih_type_former_surname', $dbLastName, 2);
+            }
           }
         }
-      }
+       }
       else { // new record
         // for records with missing names (e.g. loading from sample receipts) a fake first name and surname needs to be added
         if ($data['first_name'] == '') {
@@ -674,6 +701,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         if (!empty($value)) {
           $params[$key] = $value;
         }
+      }
+
+      // *** dob - only enter for glad if age >= 16 and <100 to avoid overwriting corrected data
+      if(isset($params['birth_date'])) {
+        $params['birth_date'] = $this->checkDOB($identifier, $params['birth_date'], $this->_dataSource);
       }
 
       try {
@@ -1373,6 +1405,13 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'contact_id' => $contactId,
         ]);
       }
+
+      // remove non-recallable reason
+      $update = "UPDATE civicrm_value_nihr_volunteer_status set nvs_nonrecallable_reason  = null where entity_id = %1";
+      CRM_Core_DAO::executeQuery($update, [
+        1 => [(int) $contactId, "Integer"],
+      ]);
+
     } catch(CiviCRM_API3_Exception $ex) {
       $this->_logger->logMessage('Error deleting tag ' . $tagName . ' on volunteer record ' . $contactId. ': ' . $ex->getMessage(), 'error');
     }
@@ -1596,5 +1635,58 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     ];
     CRM_Core_DAO::executeQuery($update, $updateParams);
     return TRUE;
+  }
+
+  private function checkDOB($id, $dob, $dataSource) {
+
+    if ($dob <> '') {
+      // return NULL if age is out of given range
+      try {
+        $query = "SELECT timestampdiff(year, %1, curdate())";
+        $queryParams = [
+          1 => [$dob, "String"],
+        ];
+        $age = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+        if ($dataSource == 'glad' || $dataSource == 'edgi') {
+          if ($age < 16 || $age > 100) {
+            $this->_logger->logMessage("$id DOB incorrect, not stored: $dob" , 'WARNING');
+            $dob = '';
+          }
+        } else {
+          // other consents may allow recruitment of children in the future
+          // don't accept age = 0 as this might indicate dob = consent date
+          if ($age < 1 || $age > 100) {
+            $this->_logger->logMessage("$id DOB incorrect, not stored: $dob" , 'WARNING');
+            $dob = '';
+          }
+        }
+      } catch (Exception $ex) {
+        $this->_logger->logMessage("Error $id calculating age: " . $ex->getMessage(), 'ERROR');
+      }
+    }
+    return $dob;
+  }
+
+
+  private function checkFormerSurname($id, $name)
+  {
+    // check if given surname is already saved as 'former surname' for the volunteer
+
+    try {
+      $query = "
+        SELECT count(*) as cnt
+        FROM civicrm_value_contact_id_history
+        where entity_id = %1
+        and identifier_type = 'cih_type_former_surname'
+        and identifier = %2";
+      $queryParams = [
+        1 => [$id, "Integer"],
+        2 => [$name, "String"],
+      ];
+
+      return CRM_Core_DAO::singleValueQuery($query, $queryParams);
+    } catch (Exception $ex) {
+      $this->_logger->logMessage('Error $id retrieving former surname: ' . $ex->getMessage(), 'error');
+    }
   }
 }

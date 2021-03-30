@@ -1,3 +1,8 @@
+## Version 1.2
+* added EDGI data
+* set/unset non-recallable reason with 'temporarily non-recallable' tag
+* added checks on DOB and surname
+
 ## Version 1.1
 * added GLAD data
 * added missing data field for NAFLD
