@@ -116,11 +116,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id'])) ||
       ($this->_dataSource == 'edgi' && !isset($this->_mapping['cih_type_edgi_id']))
     ) {
-        $this->_logger->logMessage('ERROR: ID column missing for ' . $this->_dataSource . ' data not loaded', 'error');
+        $this->_logger->logMessage('ID column missing for ' . $this->_dataSource . ' data not loaded', 'ERROR');
     }
     elseif (!isset($this->_mapping['panel'])) {
       // todo check on panel, centre and site
-      $this->_logger->logMessage('ERROR: panel missing for ' . $this->_dataSource . ' data not loaded', 'error');
+      $this->_logger->logMessage('panel missing for ' . $this->_dataSource . ' data not loaded', 'ERROR');
     }
     else {
       $this->importDemographics();
@@ -244,8 +244,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           if (!empty($data['cih_type_slam'])) {
             $this->addAlias($contactId, 'cih_type_slam', $data['cih_type_slam'], 2);
           }
+          if (!empty($data['cih_type_pack_id_mh'])) {
+            $this->addAlias($contactId, 'cih_type_pack_id_mh', $data['cih_type_pack_id_mh'], 2);
+          }
 
-          // EDGI (incl. slam ID above)
+          // EDGI (incl. slam ID and pack ID MH above)
           if (!empty($data['cih_type_edgi_id'])) {
             $this->addAlias($contactId, 'cih_type_edgi_id', $data['cih_type_edgi_id'], 2);
           }
@@ -586,7 +589,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $identifier_type = 'cih_type_packid';
           }
         } else {
-          $this->_logger->logMessage('ERROR: IBD project ID missing, no data loaded: ' . $data['last_name'], 'error');
+          $this->_logger->logMessage('IBD project ID missing, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       case "strides":
@@ -600,7 +603,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $identifier = $data['cih_type_pack_id_din'];
         }
         else {
-          $this->_logger->logMessage('ERROR: Neither STRIDES pid nor pack ID provided, no data loaded: ' . $data['last_name'] . ' ' . $data['cih_type_blood_donor_id'], 'error');
+          $this->_logger->logMessage('Neither STRIDES pid nor pack ID provided, no data loaded: ' . $data['last_name'] . ' ' . $data['cih_type_blood_donor_id'], 'ERROR');
         }
         break;
       case "nafld":
@@ -610,7 +613,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $identifier = $data['cih_type_packid'];
         }
         else {
-          $this->_logger->logMessage('ERROR: No packID provided, no data loaded: ' . $data['last_name'], 'error');
+          $this->_logger->logMessage('No packID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       case "glad":
@@ -620,7 +623,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $identifier = $data['cih_type_glad_id'];
         }
         else {
-          $this->_logger->logMessage('ERROR: No GLAD ID provided, no data loaded: ' . $data['last_name'], 'error');
+          $this->_logger->logMessage('No GLAD ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       case "edgi":
@@ -630,7 +633,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $identifier = $data['cih_type_edgi_id'];
         }
         else {
-          $this->_logger->logMessage('ERROR: No EDGI ID provided, no data loaded: ' . $data['last_name'], 'error');
+          $this->_logger->logMessage('No EDGI ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       default:
@@ -711,15 +714,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       try {
         // create/update volunteer record
         $result = civicrm_api3("Contact", "create", $params);
-        $this->_logger->logMessage('Volunteer ' . $data['participant_id'] . ' ' . $identifier . ' (' . (int)$result['id'] . ') successfully loaded/updated. New volunteer: ' . $new_volunteer);
+        $this->_logger->logMessage('Volunteer ' . $data['participant_id'] . ' ' . $identifier . ' (' . (int)$result['id'] . ') successfully loaded/updated. New volunteer: ' . $new_volunteer, 'INFO');
         $contactId = $result['id'];
       } catch (CiviCRM_API3_Exception $ex) {
-        $this->_logger->logMessage('Error message when adding volunteer ' . $data['last_name'] . " " . $ex->getMessage() . 'error');
+        $this->_logger->logMessage('when adding volunteer ' . $data['last_name'] . " " . $ex->getMessage(), 'ERROR');
       }
 
       // **** if no name is available ('x' inserted) - TODO: use participant ID instead
     } else {
-      $this->_logger->logMessage('Error local identifier missing, data not loaded ' . $data['last_name'], 'error');
+      $this->_logger->logMessage('local identifier missing, data not loaded ' . $data['last_name'], 'ERROR');
       $storeData = 0;
     }
     return array($contactId, $storeData);
@@ -736,7 +739,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if ($data['email'] <> '') {
       // --- only add if the format is correct
       if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-        $this->_logger->logMessage('Error addEmail ' . $contactID . ': invalid format, not added ' . $data['email'], 'warning');
+        $this->_logger->logMessage('addEmail ' . $contactID . ': invalid format, not added ' . $data['email'], 'WARNING');
       } else {
 
         // --- only add if not already on database either as mail or as former communication data
@@ -762,12 +765,16 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             }
             $insert = "INSERT INTO civicrm_email (contact_id, location_type_id, email, is_primary, is_billing, is_bulkmail, on_hold)
               VALUES(%1, %2, %3, %4, 0, 0, 0)";
-            CRM_Core_DAO::executeQuery($insert, [
-              1 => [(int)$contactID, "Integer"],
-              2 => [(int)$location, "Integer"],
-              3 => [$data['email'], "String"],
-              4 => [(int)$primary, "Integer"],
-            ]);
+            try {
+              CRM_Core_DAO::executeQuery($insert, [
+                1 => [(int)$contactID, "Integer"],
+                2 => [(int)$location, "Integer"],
+                3 => [$data['email'], "String"],
+                4 => [(int)$primary, "Integer"],
+              ]);
+            } catch (CiviCRM_API3_Exception $ex) {
+             $this->_logger->logMessage("addEmail $contactID " . $ex->getMessage(), 'ERROR');
+            }
           }
         }
       }
@@ -846,7 +853,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           }
 
           $insert .= ") VALUES(" . implode(", ", $columns) . ")";
-          CRM_Core_DAO::executeQuery($insert, $insertParams);
+          try {
+            CRM_Core_DAO::executeQuery($insert, $insertParams);
+          } catch (CiviCRM_API3_Exception $ex) {
+            $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
+          }
         }
       }
     }
@@ -905,7 +916,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             ];
             CRM_Core_DAO::executeQuery($insert, $insertParams);
           } catch (Exception $ex) {
-            $this->_logger->logMessage('Error addPhone ' . $contactID . ' ' . $ex->getMessage(), 'error');
+            $this->_logger->logMessage('addPhone ' . $contactID . ' ' . $ex->getMessage(), 'ERROR');
           }
         }
       }
@@ -1003,7 +1014,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             }
           } elseif (isset($dbExternalID) && $dbExternalID <> $externalID) {
             if ($update == 0) {
-              $this->_logger->logMessage("Contact ID $contactID: different identifier for $aliasType provided, not updated.", 'warning');
+              $this->_logger->logMessage("Contact ID $contactID: different identifier for $aliasType provided, not updated.", 'WARNING');
             } elseif ($update == 1) {
               try {
                 $query = "update " . $table . "
@@ -1194,7 +1205,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (isset($panel) && !empty($panel)) {
       $panelID = $this->getIdCentrePanelSite('panel', $panel);
       if (!$panelID) {
-        $this->_logger->logMessage('Panel does not exist on database: ' . $panel, 'error');
+        $this->_logger->logMessage('Panel does not exist on database: ' . $panel, 'ERROR');
         return;
       }
       $panelData['panel_id'] = $panelID;
@@ -1205,7 +1216,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (isset($centre) && !empty($centre)) {
       $centreID = $this->getIdCentrePanelSite('centre', $centre);
       if (!$centreID) {
-        $this->_logger->logMessage('Centre does not exist on database: ' . $centre, 'error');
+        $this->_logger->logMessage('Centre does not exist on database: ' . $centre, 'ERROR');
         return;
       }
       $panelData['centre_id'] = $centreID;
@@ -1216,7 +1227,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (isset($site) && !empty($site)) {
       $siteID = $this->getIdCentrePanelSite('site', $site, $siteAliasTypeValue);
       if (!$siteID) {
-        $this->_logger->logMessage('Site does not exist on database: ' . $site, 'error');
+        $this->_logger->logMessage('Site does not exist on database: ' . $site, 'ERROR');
         return;
       }
       $panelData['site_id'] = $siteID;
@@ -1233,7 +1244,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
     }
     if ($countMandatory < 2) {
-      $this->_logger->logMessage('No panel information provided for : ' . $contactID, 'error');
+      $this->_logger->logMessage('No panel information provided for : ' . $contactID, 'ERROR');
       return;
     }
     $panelData['contact_id'] = $contactID;
@@ -1366,7 +1377,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         'target_id' => $contactId,
       ]);
     } catch (CiviCRM_API3_Exception $ex) {
-      $this->_logger->logMessage('Error inserting ' . $activityType . ' activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'error');
+      $this->_logger->logMessage('inserting ' . $activityType . ' activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
     }
   }
 
@@ -1384,7 +1395,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'contact_id' => $contactId,
         ]);
       } catch (CiviCRM_API3_Exception $ex) {
-        $this->_logger->logMessage('Error adding tag ' . $tagName . ' to volunteer record ' . $contactId . ': ' . $ex->getMessage(), 'error');
+        $this->_logger->logMessage('adding tag ' . $tagName . ' to volunteer record ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
       }
     }
   }
@@ -1413,7 +1424,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ]);
 
     } catch(CiviCRM_API3_Exception $ex) {
-      $this->_logger->logMessage('Error deleting tag ' . $tagName . ' on volunteer record ' . $contactId. ': ' . $ex->getMessage(), 'error');
+      $this->_logger->logMessage('deleting tag ' . $tagName . ' on volunteer record ' . $contactId. ': ' . $ex->getMessage(), 'ERROR');
     }
   }
 
@@ -1442,7 +1453,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         'case_id' => $caseId,
       ]);
     } catch (CiviCRM_API3_Exception $ex) {
-      $this->_logger->logMessage('Error checking on $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'error');
+      $this->_logger->logMessage('checking on $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
     }
 
     if ($cnt == 0) {
@@ -1456,7 +1467,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'status_id' => "Completed",
         ]);
       } catch (CiviCRM_API3_Exception $ex) {
-        $this->_logger->logMessage('Error inserting $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'error');
+        $this->_logger->logMessage('inserting $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
       }
     }
   }
@@ -1533,7 +1544,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         ]);
 
       } catch (CiviCRM_API3_Exception $ex) {
-        $this->_logger->logMessage('Error checking on withdrawn activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'error');
+        $this->_logger->logMessage('checking on withdrawn activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
       }
 
       if ($cnt == 0) {
@@ -1686,7 +1697,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
       return CRM_Core_DAO::singleValueQuery($query, $queryParams);
     } catch (Exception $ex) {
-      $this->_logger->logMessage('Error $id retrieving former surname: ' . $ex->getMessage(), 'error');
+      $this->_logger->logMessage('$id retrieving former surname: ' . $ex->getMessage(), 'ERROR');
     }
   }
 }

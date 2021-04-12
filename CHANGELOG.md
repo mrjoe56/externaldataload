@@ -1,3 +1,7 @@
+## Version 1.3
+* added Pack ID MH (EDGI and GLAD)
+* updated error reporting
+
 ## Version 1.2
 * added EDGI data
 * set/unset non-recallable reason with 'temporarily non-recallable' tag
