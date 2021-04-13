@@ -462,6 +462,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($newKey == 'unable_to_travel') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_unable_to_travel', 'id');
       }
+      if ($newKey == 'genotypic_sex') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_genotypic_sex', 'id');
+      }
+
 
       if ($newKey == 'non_recallable_reason') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerStatusCustomField('nvs_nonrecallable_reason', 'id');

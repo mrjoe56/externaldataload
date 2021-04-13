@@ -1,3 +1,6 @@
+## Version 1.4
+* added data field 'genotypic_sex'
+
 ## Version 1.3
 * added Pack ID MH (EDGI and GLAD)
 * updated error reporting

@@ -12,6 +12,7 @@
   "previous_names": "previous_names",
   "dob": "birth_date",
   "gender": "gender_id",
+  "genotypic_sex": "genotypic_sex",
   "email": "email",
   "paper_questionnaire": "nihr_paper_hlq",
   "address1": "address_1",
