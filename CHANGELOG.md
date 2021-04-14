@@ -1,3 +1,6 @@
+## Version 1.5
+* updated withdrawal procedure to include STRIDES
+
 ## Version 1.4
 * added data field 'genotypic_sex'
 

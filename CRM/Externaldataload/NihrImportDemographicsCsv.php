@@ -320,8 +320,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           }
 
           // ** withdrawal data
-          if (!empty($data['withdrawn_date'])) {
-            $this->withdrawVolunteer($contactId, $data['withdrawn_date'], '', $data['withdrawn_by'], $data['request_to_destroy_data'], $data['request_to_destroy_samples']);
+          if (!empty($data['withdrawn_date']) ||
+            ($this->_dataSource == 'strides' && isset($data['withdrawal_request_date']) && !empty($data['withdrawal_request_date']))) {
+            $this->withdrawVolunteer($contactId, $data, $this->_dataSource);
           }
           // ** deceased
           if (!empty($data['deceased_date'])) {
@@ -1536,7 +1537,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param string $sourceDestroySamples
    * @throws Exception
    */
-  private function withdrawVolunteer($contactId, $sourceDate, $sourceReason, $sourceBy, $sourceDestroyData = "", $sourceDestroySamples = "")
+  private function withdrawVolunteer($contactId, $data, $dataSource)
   {
       // *** Withdraw volunteer from the BioResource
 
@@ -1560,35 +1561,55 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $reasonCustomField = "custom_" . Civi::service('nbrBackbone')->getWithdrawnReasonCustomFieldId();
         $destroyDataCustomField = "custom_" . Civi::service('nbrBackbone')->getWithdrawnDestroyDataCustomFieldId();
         $destroySamplesCustomField = "custom_" . Civi::service('nbrBackbone')->getWithdrawnDestroySamplesCustomFieldId();
-        if (!empty($sourceReason)) {
-          $activityParams[$reasonCustomField] = $activity->findOrCreateStatusReasonValue("withdrawn", $sourceReason);
+        if (!empty($data['withdrawn_reason'])) {
+          $activityParams[$reasonCustomField] = $activity->findOrCreateStatusReasonValue("withdrawn", $data['withdrawn_reason']);
         }
-        if ($sourceDestroyData == '') {
+        if ($data['request_to_destroy_data'] == '') {
           $message = "No request to destroy data flag found for volunteer " . $contactId . ", assumed FALSE.";
           CRM_Nihrbackbone_Utils::logMessage($this->_importId, $message, $this->_originalFileName, 'warning');
         }
-        if ($sourceDestroySamples == '') {
+        if ($data['request_to_destroy_samples'] == '') {
           $message = "No request to destroy flag found for volunteer " . $contactId . ", assumed FALSE.";
           CRM_Nihrbackbone_Utils::logMessage($this->_importId, $message, $this->_originalFileName, 'warning');
         }
         $activityParams[$destroyDataCustomField] = 0;
         $activityParams[$destroySamplesCustomField] = 0;
-        if ($sourceDestroyData == TRUE) {
+        if ($data['request_to_destroy_data'] == TRUE) {
           $activityParams[$destroyDataCustomField] = 1;
         }
-        if ($sourceDestroySamples == TRUE)
+        if ($data['request_to_destroy_samples'] == TRUE) {
           $activityParams[$destroySamplesCustomField] = 1;
+        }
 
-        $activityParams['activity_date_time'] = $this->formatActivityDate($sourceDate);
-        if (!empty($sourceBy)) {
+        $activityParams['activity_date_time'] = $this->formatActivityDate($data['withdrawn_date']);
+
+        if (!empty($data['withdrawn_by'])) {
           $resourcer = new CRM_Nihrbackbone_NbrResourcer();
-          $sourceContactId = $resourcer->findWithName($sourceBy);
+          $sourceContactId = $resourcer->findWithName($data['withdrawn_by']);
           if ($sourceContactId) {
             $activityParams['source_contact_id'] = $sourceContactId;
           } else {
-            $activityParams['details'] = "Withdrawn by: " . $sourceBy;
+            $activityParams['details'] = "Withdrawn by: " . $data['withdrawn_by'];
           }
         }
+        $activityParams['status_id'] = 'Completed';
+
+        // STRIDES - status is 'scheduled', date +1 week, and additional custom fields
+        if($dataSource == 'strides') {
+          $activityParams['status_id'] = 'Scheduled';
+          $activityParams['activity_date_time'] = $this->currentDatePlus(7);
+        }
+        $addFields = array('withdrawal_request_date', 'withdrawal_confirmation_date',
+          'withdrawal_initiated_by', 'withdrawal_authorising_team');
+        foreach ($addFields as &$field) {
+          if (isset($data[$field]) && !empty($data[$field])) {
+            $newKey = $this->getCustomFieldKey("avw_$field");
+            if ($newKey != '') {
+              $activityParams[$newKey] = $data[$field];
+            }
+          }
+        }
+
         if (!empty($activityParams)) {
           $activityParams['priority_id'] = Civi::service('nbrBackbone')->getNormalPriorityId();
           $activityParams['subject'] = 'Withdrawn';
@@ -1596,8 +1617,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           if ($new != TRUE) {
             CRM_Nihrbackbone_Utils::logMessage($this->_importId, $new, $this->_originalFileName, 'warning');
           }
-          // set volunteer status to withdrawn
-          $this->setVolunteerStatus($contactId, Civi::service('nbrBackbone')->getWithdrawnVolunteerStatus());
+          // set volunteer status to withdrawn (exeption: STRIDES)
+          if($dataSource != 'strides') {
+            $this->setVolunteerStatus($contactId, Civi::service('nbrBackbone')->getWithdrawnVolunteerStatus());
+          }
         }
       }
     }
@@ -1621,6 +1644,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
     }
     return $activityDate->format("Y-m-d");
+  }
+
+  private function currentDatePlus($addDays) {
+    // return current date plus $addDays days, time set to 08:00
+    try {
+      return CRM_Core_DAO::singleValueQuery("
+        SELECT concat(date_add(curdate(), interval $addDays day), ' 08:00')");
+    } catch (Exception $ex) {}
   }
 
   /**
@@ -1702,6 +1733,27 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       return CRM_Core_DAO::singleValueQuery($query, $queryParams);
     } catch (Exception $ex) {
       $this->_logger->logMessage('$id retrieving former surname: ' . $ex->getMessage(), 'ERROR');
+    }
+  }
+
+  public function getCustomFieldKey ($fieldName)
+  {
+    try {
+      $result = civicrm_api3('CustomField', 'get', [
+        'sequential' => 1,
+        'name' => $fieldName,
+      ]);
+    } catch (Exception $ex) {
+      $this->_logger->logMessage("retrieving custom field key for $fieldName " . $ex->getMessage(), 'ERROR');
+      return '';
+    }
+
+    if (!isset($result['id']) || $result['id'] == '') {
+      $this->_logger->logMessage("INVALID CUSTOM FIELD $fieldName ", 'ERROR');
+      return '';
+    }
+    else {
+      return "custom_".$result['id'];
     }
   }
 }

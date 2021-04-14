@@ -87,6 +87,12 @@
   "withdrawn_by": "withdrawn_by",
   "withdrawn_reason": "withdrawn_reason",
   "withdrawn_date": "withdrawn_date",
+
+  "withdrawal_request_date": "withdrawal_request_date",
+  "withdrawal_confirmation_date": "withdrawal_confirmation_date",
+  "withdrawal_initiated_by": "withdrawal_initiated_by",
+  "withdrawal_authorising_team": "withdrawal_authorising_team",
+
   "redundant_by": "redundant_by",
   "redundant_reason": "redundant_reason",
   "redundant_date": "redundant_date",
