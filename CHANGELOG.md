@@ -1,3 +1,7 @@
+## Version 1.6
+* ensure one and only one address is flagged as 'primary'
+* avoid address duplication with comparison on lowercase and letters and numbers only
+
 ## Version 1.5
 * updated withdrawal procedure to include STRIDES
 
