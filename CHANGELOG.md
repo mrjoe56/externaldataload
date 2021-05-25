@@ -1,3 +1,6 @@
+## Version 1.7
+* further update to 1.6
+
 ## Version 1.6
 * ensure one and only one address is flagged as 'primary'
 * avoid address duplication with comparison on lowercase and letters and numbers only

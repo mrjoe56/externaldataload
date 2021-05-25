@@ -798,8 +798,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if ($data['address_1'] <> '' && $data['postcode'] <> '') {
 
       // compare address line and postcode on lowercase without special chars
-      $address_1_comp = preg_replace('/[^A-Za-z0-9]/', '', strtolower($data['address_1']));
-      $postcode_comp = preg_replace('/[^A-Za-z0-9]/', '', strtolower($data['postcode']));
+      $address_1_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['address_1']));
+      $postcode_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['postcode']));
 
       // --- only add if not already on database as address or former communication data
       $query = "SELECT COUNT(*) as addressCount, (SELECT COUNT(*) FROM civicrm_value_fcd_former_comm_data
@@ -807,8 +807,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             AS fcdCount
         FROM civicrm_address
         WHERE contact_id = %1
-        and REGEXP_REPLACE(LOWER(street_address), '[^a-zA-Z1-9]', '') = %5
-        and REGEXP_REPLACE(LOWER(postal_code), '[^a-zA-Z1-9]', '') = %6";
+        and REGEXP_REPLACE(LOWER(street_address), '[^a-z0-9]', '') = %5
+        and REGEXP_REPLACE(LOWER(postal_code), '[^a-z0-9]', '') = %6";
 
       $dao = CRM_Core_DAO::executeQuery($query, [
         1 => [(int)$contactID, "Integer"],
