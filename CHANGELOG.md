@@ -1,3 +1,6 @@
+## Version 1.8
+* bug fix site mapping: check site alias (STRIDES and IBD) before ODS code
+
 ## Version 1.7
 * further update to 1.6
 

@@ -1181,19 +1181,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    */
   public function getIdCentrePanelSite($type, $name, $siteAliasType = NULL)
   {
-    // site can be sic code or site alias
+    $foundId = 0;
+
     if ($type == "site") {
-      $query = "SELECT id FROM civicrm_contact WHERE contact_type = %1 AND sic_code = %2 AND contact_sub_type = %3";
-      $queryParams = [
-        1 => ["Organization", "String"],
-        2 => [$name, "String"],
-        3 => ['nbr_site', "String"],
-      ];
-      $foundId = CRM_Core_DAO::singleValueQuery($query, $queryParams);
-      if ($foundId) {
-        return (int)$foundId;
-      } else {
-        // try site alias with type
+      // site can be sic code or site alias - if site alias is provided, try this first
+      if (isset($siteAliasType)) {
         $table = Civi::service('nbrBackbone')->getSiteAliasTableName();
         $siteAliasColumn = Civi::service('nbrBackbone')->getSiteAliasColumnName();
         $siteAliasTypeColumn = Civi::service('nbrBackbone')->getSiteAliasTypeColumnName();
@@ -1204,11 +1196,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           2 => [$siteAliasType, "String"],
         ];
         $foundId = CRM_Core_DAO::singleValueQuery($query, $queryParams);
-        if ($foundId) {
-          return (int)$foundId;
-        }
       }
-    } else {
+      if (!$foundId) {
+        $query = "SELECT id FROM civicrm_contact WHERE contact_type = %1 AND sic_code = %2 AND contact_sub_type = %3";
+        $queryParams = [
+          1 => ["Organization", "String"],
+          2 => [$name, "String"],
+          3 => ['nbr_site', "String"],
+        ];
+        $foundId = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+      }
+    }
+
+    else {
+      // panel or centre provided
       $query = "SELECT id FROM civicrm_contact WHERE contact_type = %1 AND organization_name = %2 AND contact_sub_type = %3";
       $queryParams = [
         1 => ["Organization", "String"],
@@ -1216,10 +1217,13 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         3 => ['nbr_' . $type, "String"],
       ];
       $foundId = CRM_Core_DAO::singleValueQuery($query, $queryParams);
-      if ($foundId) {
-        return (int)$foundId;
-      }
     }
+
+    if ($foundId) {
+      return (int)$foundId;
+    }
+
+    // no panel/centre/site mapping found
     return FALSE;
   }
 
