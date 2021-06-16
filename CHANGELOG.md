@@ -1,3 +1,7 @@
+## Version 1.9
+* created stub to load HLQ data
+* allow multiple disease records of the same disease but different notes
+
 ## Version 1.8
 * bug fix site mapping: check site alias (STRIDES and IBD) before ODS code
 

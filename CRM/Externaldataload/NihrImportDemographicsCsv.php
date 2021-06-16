@@ -23,6 +23,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   private $_failed = NULL;
   private $_read = NULL;
   private $_originalFileName = NULL;
+  private $_createRecord = NULL;
 
   /**
    * CRM_Externaldataload_NihrImportDemographicsCsv constructor.
@@ -48,6 +49,12 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $this->_dataSource = $additional_parameter['dataSource'];
     } else {
       $this->_dataSource = "";
+    }
+
+    if (isset($additional_parameter['createRecord'])) {
+      $this->_createRecord = $additional_parameter['createRecord'];
+    } else {
+      $this->_createRecord = 1;
     }
 
     $this->_logger = new CRM_Nihrbackbone_NihrLogger('nbrcsvimport_' . $this->_dataSource . '_' . date('Ymdhis'));
@@ -182,7 +189,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     while (!feof($this->_csv)) {
       $data = fgetcsv($this->_csv, 0, $this->_separator);
-
       if ($data) {
         // map data based on filename
         $data = $this->applyMapping($data);
@@ -688,6 +694,13 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
        }
       else { // new record
+
+        // ... but not for HLQ data (as this might be linked to withdrawn volunteers but not deleted from the cum file)
+        if($this->_createRecord == 0) {
+          $this->_logger->logMessage("$identifier: ID does not exist on the database, no data loaded", 'WARNING');
+          return array(0, 0);
+        }
+
         // for records with missing names (e.g. loading from sample receipts) a fake first name and surname needs to be added
         if ($data['first_name'] == '') {
           $data['first_name'] = 'x';
@@ -1107,15 +1120,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       // --- check if disease already exists ---------------------------------------------------------------------
 
       // todo: add more fields; only one brother, sister etc possible per disease!!!!
+      // 16/6/2021 - added notes as one of the cnt criteria - e.g. 'other conditions' can be listed multiple times
       $query = "SELECT count(*)
                   from " . $table . "
                   where entity_id = %1
                   and " . $familyMemberColumn . " = %2
-                  and ". $diseaseColumn . " = %3";
+                  and " . $diseaseColumn . " = %3
+                  and " . $diseaseNotesColumn . " = %4";
       $queryParams = [
         1 => [$contactID, "Integer"],
         2 => [$familyMember, "String"],
         3 => [$disease, "String"],
+        4 => [$diseaseNotes, "String"],
       ];
       $cnt = CRM_Core_DAO::singleValueQuery($query, $queryParams);
 

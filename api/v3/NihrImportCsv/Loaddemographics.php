@@ -16,11 +16,13 @@ function civicrm_api3_nihr_import_csv_Loaddemographics($params) {
   $folder = 'nbr_folder_'.$params['dataSource'];
   $loadFolder = Civi::settings()->get($folder);
   if ($loadFolder && !empty($loadFolder)) {
-
     // 1) upload PID data file
     processFile($loadFolder, $params['dataSource'] . '_pid_data_export*', $params);
     // 2) contact data
     processFile($loadFolder, $params['dataSource'] . '_contacts_export*', $params);
+    // 3) hlq data - do not create new records for these data files!
+    $params['createRecord'] = 0;
+    processFile($loadFolder, $params['dataSource'] . '_hlq_export*', $params);
   }
   else {
     throw new API_Exception(E::ts('Folder for import (' . $folder . ') not found or empty'),  1001);
