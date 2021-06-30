@@ -587,8 +587,17 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     switch ($this->_dataSource) {
       case "ucl":
-        // todo check if ID is empty, if so, do not load record
-        //contactId = $volunteer->findVolunteerByAlias($data['cih_type_ucl_local'], 'cih_type_ucl_local');
+        // use national identifier as main identifier
+        if($data['cih_type_ucl'] <> '') {
+          $identifier_type = 'cih_type_ucl';
+          $identifier = $data['cih_type_ucl'];
+        }
+        break;
+      case "cns":
+        if($data['cih_type_covid_id'] <> '') {
+          $identifier_type = 'cih_type_covid_id';
+          $identifier = $data['cih_type_covid_id'];
+        }
         break;
       case "ibd":
         if (!empty($data['pat_bio_no'])) {
