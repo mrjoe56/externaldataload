@@ -1,3 +1,6 @@
+## Version 1.11
+* rare data migration (added param and fields)
+* temporarily non-recallable tag: do not set on volunteer records that are linked to multiple panels
 ## Version 1.10
 * included UCL and CNS data for upload
 
