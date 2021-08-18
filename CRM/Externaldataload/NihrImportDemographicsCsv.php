@@ -121,7 +121,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           !isset($this->_mapping['cih_type_pack_id_din'])) ||
       ($this->_dataSource == 'nafld' && !isset($this->_mapping['cih_type_packid'])) ||
       ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id'])) ||
-      ($this->_dataSource == 'edgi' && !isset($this->_mapping['cih_type_edgi_id']))
+      ($this->_dataSource == 'edgi' && !isset($this->_mapping['cih_type_edgi_id'])) ||
+      ($this->_dataSource == 'rare_migration' && !isset($this->_mapping['cih_type_rare_migration_id']))
     ) {
         $this->_logger->logMessage('ID column missing for ' . $this->_dataSource . ' data not loaded', 'ERROR');
     }
@@ -263,6 +264,38 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addAlias($contactId, 'cih_type_former_surname', $data['previous_names'], 2);
           }
 
+          // Rare migration
+          if (!empty($data['cih_type_rare_migration_id'])) {
+            $this->addAlias($contactId, 'cih_type_rare_migration_id', $data['cih_type_rare_migration_id'], 0);
+          }
+          $aliases = array(
+              'cih_type_rares_bioresource_id',
+              'cih_type_bridge_id',
+              'cih_type_genetics_dept_number',
+              'cih_type_oc_subject_id',
+              'cih_type_pedigree_number',
+              'cih_type_rare_study_specific_id',
+              'cih_type_family_id',
+              'cih_type_bpd_cs_id',
+              'cih_type_cpms_id',
+              'cih_type_gold_id',
+              'cih_type_igan_id',
+              'cih_type_imperial_oc_id',
+              'cih_type_medscinet_id',
+              'cih_type_mendelian_id',
+              'cih_type_radar_id',
+              'cih_type_thrombogenomics_id',
+              'cih_type_parent_sample_id',
+              'cih_type_cuh_pathology_id',
+              'cih_type_gel_id'
+          );
+
+          foreach ($aliases as &$alias) {
+            if (isset($data[$alias]) && !empty($data[$alias])) {
+              $this->addAlias($contactId, $alias, $data[$alias], 2);
+            }
+          }
+
           // *** Diseases ***
           $this->addDisease($contactId, $data['family_member'], $data['disease'], $data['diagnosis_year'], $data['diagnosis_age'], $data['disease_notes'], $data['taking_medication']);
 
@@ -344,7 +377,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           // *** tags
           if (isset($data['temporarily_non_recallable'])) {
             if ($data['temporarily_non_recallable'] == 'Yes') {
-              $this->addTag($contactId, 'Temporarily non-recallable');
+              // only set tag if volunteer is not linked to any other panel
+              $cntQuery = "SELECT count(*)
+                    from civicrm_value_nihr_volunteer_panel
+                    where entity_id = %1";
+              $cntQueryParam = [
+                1 => [$contactId, "Integer"],
+              ];
+              $cnt = CRM_Core_DAO::singleValueQuery($cntQuery, $cntQueryParam);
+              if ($cnt < 2) {
+                $this->addTag($contactId, 'Temporarily non-recallable');
+              }
+              else {
+                $this->removeTag($contactId, 'Temporarily non-recallable');
+              }
             }
             elseif ($data['temporarily_non_recallable'] == 'No' || $data['temporarily_non_recallable'] == '') {
               $this->removeTag($contactId, 'Temporarily non-recallable');
@@ -403,6 +449,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
       if ($newKey == 'rhesus_factor') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_rhesus_factor', 'id');
+      }
+      if ($newKey == 'proband') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_proband', 'id');
       }
 
       // *** custom group 'Lifestyle'
@@ -654,6 +703,16 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         else {
           $this->_logger->logMessage('No EDGI ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
+        }
+        break;
+      case "rare_migration":
+        // cih_type_rare_migration_id
+        if($data['cih_type_rare_migration_id'] <> '') {
+          $identifier_type = 'cih_type_rare_migration_id';
+          $identifier = $data['cih_type_rare_migration_id'];
+        }
+        else {
+          $this->_logger->logMessage('No Rare Migration ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       default:

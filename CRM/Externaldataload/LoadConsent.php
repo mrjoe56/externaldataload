@@ -46,7 +46,10 @@ class CRM_Externaldataload_LoadConsent
           $consentStatusField = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consent_status', 'id');
           $consentedByField = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consented_by', 'id');
           $geneticFeedback = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_genetic_feedback', 'id');
+          $pertinentGeneticFeedback = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_pertinent_genetic_feedback', 'id');
+          $optedOutOfGelMain = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_opted_out_of_gel_main', 'id');
           $inviteType = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_invite_type', 'id');
+
           // consent not yet on Civi - add
           // *** check if 'consented by' has got a 'BioResourcer' record; if not, add name to details
           $details = '';
@@ -79,6 +82,8 @@ class CRM_Externaldataload_LoadConsent
               $consentedByField => $consentedBy,
               'details' => $details,
               $geneticFeedback => $data['genetic_feedback'],
+              $pertinentGeneticFeedback => $data['pertinent_genetic_feedback'],
+              $optedOutOfGelMain => $data['opted_out_of_gel_main'],
               $inviteType => $data['invite_type'],
               'subject' => $subject,
             ]);
