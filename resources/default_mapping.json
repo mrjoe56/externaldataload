@@ -103,6 +103,7 @@
   "request_to_destroy_samples": "request_to_destroy_samples",
   "death_reported_by": "death_reported_by",
   "death_reported_date": "death_reported_date",
+  "deceased": "deceased",
   "deceased_date": "deceased_date",
 
   "gdpr_request_received": "gdpr_request_received",

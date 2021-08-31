@@ -1,6 +1,11 @@
+## Version 1.12
+* included IMID and GSTT data for upload
+* fct "processDeceased" migrated from Backbone and updated to allow flagging a volunteer as deceased without a date of death provided
+
 ## Version 1.11
 * rare data migration (added param and fields)
 * temporarily non-recallable tag: do not set on volunteer records that are linked to multiple panels
+
 ## Version 1.10
 * included UCL and CNS data for upload
 

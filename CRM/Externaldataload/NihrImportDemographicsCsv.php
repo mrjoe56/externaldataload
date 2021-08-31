@@ -116,10 +116,12 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     // check if mapping contains mandatory columns according to source given
     if (($this->_dataSource == 'ucl' && !isset($this->_mapping['cih_type_ucl_local'])) ||
+      ($this->_dataSource == 'gstt' && !isset($this->_mapping['cih_type_gstt'])) ||
       ($this->_dataSource == 'ibd' && !isset($this->_mapping['pat_bio_no'])) ||
       ($this->_dataSource == 'strides' && !isset($this->_mapping['cih_type_strides_pid']) &&
           !isset($this->_mapping['cih_type_pack_id_din'])) ||
       ($this->_dataSource == 'nafld' && !isset($this->_mapping['cih_type_packid'])) ||
+      ($this->_dataSource == 'imid' && !isset($this->_mapping['cih_type_packid'])) ||
       ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id'])) ||
       ($this->_dataSource == 'edgi' && !isset($this->_mapping['cih_type_edgi_id'])) ||
       ($this->_dataSource == 'rare_migration' && !isset($this->_mapping['cih_type_rare_migration_id']))
@@ -315,6 +317,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               $this->addAlias($contactId, 'cih_type_ucl', $data['cih_type_ucl'], 0);
 
               break;
+
+            case "gstt":
+              $this->addAlias($contactId, 'cih_type_gstt', $data['cih_type_gstt'], 0);
+
+              break;
           }
 
           // *** all recruitment information is stored in one recruitment case *************************
@@ -363,9 +370,13 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             ($this->_dataSource == 'strides' && isset($data['withdrawal_request_date']) && !empty($data['withdrawal_request_date']))) {
             $this->withdrawVolunteer($contactId, $data, $this->_dataSource);
           }
+
           // ** deceased
-          if (!empty($data['deceased_date'])) {
-            $deceased = CRM_Nihrbackbone_NihrVolunteer::processDeceased($contactId, $data['deceased_date']);
+          if ((isset($data['deceased']) and !empty($data['deceased']) )
+            or (isset($data['deceased_date']) and !empty($data['deceased_date']))) {
+            $deceasedDate = '';
+            if(isset($data['deceased_date']) and !empty($data['deceased_date'])) { $deceasedDate = $data['deceased_date']; }
+            $deceased = $this->processDeceased($contactId, $deceasedDate);
             // set volunteer status to deceased
             $this->setVolunteerStatus($contactId, Civi::service('nbrBackbone')->getDeceasedVolunteerStatus());
             if (!$deceased) {
@@ -642,6 +653,13 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $identifier = $data['cih_type_ucl'];
         }
         break;
+      case "gstt":
+        // use national identifier as main identifier
+        if($data['cih_type_gstt'] <> '') {
+          $identifier_type = 'cih_type_gstt';
+          $identifier = $data['cih_type_gstt'];
+        }
+        break;
       case "cns":
         if($data['cih_type_covid_id'] <> '') {
           $identifier_type = 'cih_type_covid_id';
@@ -676,6 +694,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         break;
       case "nafld":
+      case "imid":
         // packid
         if($data['cih_type_packid'] <> '') {
           $identifier_type = 'cih_type_packid';
@@ -1750,6 +1769,44 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
       }
     }
+
+  /**
+   * Method to set a volunteer to deceased
+   * - tick CiviCRM deceased box and set date if not empty
+   * - set volunteer status deceased
+   *
+   * @param $volunteerId
+   * @param $deceasedDate
+   * @throws Exception
+   * @return bool
+   */
+  private function processDeceased($volunteerId, $deceasedDate): bool
+  {
+    if (empty($volunteerId)) {
+      return FALSE;
+    }
+
+    // tick the deceased box in CiviCRM and set deceased date if applicable
+    if (!$deceasedDate instanceof DateTime && !empty($deceasedDate)) {
+      $deceasedDate = new DateTime($deceasedDate);
+      $query = "UPDATE civicrm_contact SET is_deceased = %1, deceased_date = %2 WHERE id = %3";
+      $queryParams = [
+        1 => [1, "Integer"],
+        2 => [$deceasedDate->format("Y-m-d"), "String"],
+        3 => [(int) $volunteerId, "Integer"],
+      ];
+    }
+    else {
+      // no deceased date provided
+      $query = "UPDATE civicrm_contact SET is_deceased = %1 WHERE id = %2";
+      $queryParams = [
+        1 => [1, "Integer"],
+        2 => [(int) $volunteerId, "Integer"],
+      ];
+    }
+    CRM_Core_DAO::executeQuery($query, $queryParams);
+    return TRUE;
+  }
 
   /**
    * Method to format the activity date time
