@@ -271,7 +271,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addAlias($contactId, 'cih_type_rare_migration_id', $data['cih_type_rare_migration_id'], 0);
           }
           $aliases = array(
-              'cih_type_rares_bioresource_id',
               'cih_type_bridge_id',
               'cih_type_genetics_dept_number',
               'cih_type_oc_subject_id',
@@ -287,7 +286,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               'cih_type_mendelian_id',
               'cih_type_radar_id',
               'cih_type_thrombogenomics_id',
-              'cih_type_parent_sample_id',
+              'cih_type_catgo_pack_id',
               'cih_type_cuh_pathology_id',
               'cih_type_gel_id'
           );
