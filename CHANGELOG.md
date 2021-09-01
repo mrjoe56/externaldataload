@@ -1,3 +1,6 @@
+## Version 1.13
+* updated rare alias types
+
 ## Version 1.12
 * included IMID and GSTT data for upload
 * fct "processDeceased" migrated from Backbone and updated to allow flagging a volunteer as deceased without a date of death provided

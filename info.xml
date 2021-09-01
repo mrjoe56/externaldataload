@@ -14,8 +14,8 @@
     <url desc="Support">https://civicoop.org</url>
     <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
   </urls>
-  <releaseDate>2021-08-31</releaseDate>
-  <version>1.12</version>
+  <releaseDate>2021-09-01</releaseDate>
+  <version>1.13</version>
   <develStage>beta</develStage>
   <compatibility>
     <ver>5.0</ver>
