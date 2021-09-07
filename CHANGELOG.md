@@ -1,3 +1,6 @@
+## Version 1.14
+* rare migration: only add temporarily-non-recallable flag for new volunteers
+
 ## Version 1.13
 * updated rare alias types
 

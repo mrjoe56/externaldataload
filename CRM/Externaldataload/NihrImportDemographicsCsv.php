@@ -199,7 +199,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $data = $this->formatData($data);
 
         // add volunteer or update data of existing volunteer
-        list($contactId, $dataStored) = $this->addContact($data);
+        list($contactId, $dataStored, $new_volunteer) = $this->addContact($data);
         // data is not stored if no local identifier is given or if the existing volunteer has a status
         // other than active or pending
         if ($dataStored) {
@@ -396,7 +396,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               ];
               $cnt = CRM_Core_DAO::singleValueQuery($cntQuery, $cntQueryParam);
               if ($cnt < 2) {
-                $this->addTag($contactId, 'Temporarily non-recallable');
+                // for rare migration - only add, if volunteer not already on database
+                if($this->_dataSource != 'rare_migration' or $new_volunteer == 1) {
+                  $this->addTag($contactId, 'Temporarily non-recallable');
+                }
               }
               else {
                 $this->removeTag($contactId, 'Temporarily non-recallable');
@@ -754,7 +757,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         if (!$volunteer->VolunteerStatusActiveOrPending($contactId, $this->_logger)) {
           $this->_logger->logMessage('volunteer ' . $identifier . ' (' . $contactId .
             ') has status other than active or pending, no data loaded', 'WARNING');
-          return array(0, 0);
+          return array(0, 0, 0);
         }
 
         $data['id'] = $contactId;
@@ -784,7 +787,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         // ... but not for HLQ data (as this might be linked to withdrawn volunteers but not deleted from the cum file)
         if($this->_createRecord == 0) {
           $this->_logger->logMessage("$identifier: ID does not exist on the database, no data loaded", 'WARNING');
-          return array(0, 0);
+          return array(0, 0, 0);
         }
 
         // for records with missing names (e.g. loading from sample receipts) a fake first name and surname needs to be added
@@ -829,7 +832,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $this->_logger->logMessage('local identifier missing, data not loaded ' . $data['last_name'], 'ERROR');
       $storeData = 0;
     }
-    return array($contactId, $storeData);
+    return array($contactId, $storeData, $new_volunteer);
   }
 
   /**
