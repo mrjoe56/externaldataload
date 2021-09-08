@@ -1,3 +1,6 @@
+## Version 1.15
+* added notes_date and cih_type_hospital_number
+
 ## Version 1.14
 * rare migration: only add temporarily-non-recallable flag for new volunteers
 
