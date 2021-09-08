@@ -55,6 +55,7 @@
   "rhesus_factor": "rhesus_factor",
   "proband": "proband",
   "notes": "notes",
+  "notes_date": "notes_date",
 
   "disease": "disease",
   "disease_family_member": "family_member",

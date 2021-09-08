@@ -213,7 +213,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addPhone($contactId, $data, 'phone', $data['contact_location'], $data['contact_phone_type'], $data['is_primary']);
           }
 
-          $this->addNote($contactId, $data['notes']);
+          $this->addNote($contactId, $data['notes'], $data['notes_date']);
 
           if ($data['panel'] <> '' || $data['site'] <> '' || $data['centre'] <> '') {
             $this->addPanel($contactId, $data['panel'], $data['site'], $data['centre'], $data['source']);
@@ -288,7 +288,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               'cih_type_thrombogenomics_id',
               'cih_type_catgo_pack_id',
               'cih_type_cuh_pathology_id',
-              'cih_type_gel_id'
+              'cih_type_gel_id',
+              'cih_type_hospital_number'
           );
 
           foreach ($aliases as &$alias) {
@@ -1074,14 +1075,19 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param $contactID
    * @param $note
    */
-  private function addNote($contactID, $note)
+  private function addNote($contactID, $note, $date)
   {
     if (isset($note) && $note <> '') {
-      $insert = "INSERT INTO civicrm_note (entity_table, entity_id, note, contact_id) VALUES(%1, %2, %3, %2)";
+      if ($date == '') {
+        // use today's date, if no date is given
+        $date = date("Y-m-d");
+      }
+      $insert = "INSERT INTO civicrm_note (entity_table, entity_id, note, contact_id, modified_date) VALUES(%1, %2, %3, %2, %4)";
       $insertParams = [
         1 => ["civicrm_contact", "String"],
         2 => [(int)$contactID, "Integer"],
         3 => [$note, "String"],
+        4 => [$date, "String"],
       ];
       CRM_Core_DAO::executeQuery($insert, $insertParams);
     }
