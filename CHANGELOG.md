@@ -1,3 +1,7 @@
+## Version 1.16
+* rare migration: added CPMS accrual and redundant activities
+* notes: avoid duplicates (exact match only)
+
 ## Version 1.15
 * added notes_date and cih_type_hospital_number
 

@@ -345,16 +345,21 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // migrate paper questionnaire flag (IBD)
           if (isset($data['nihr_paper_hlq']) && $data['nihr_paper_hlq'] == 'Yes') {
-            $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', $caseID);
           }
 
           // migrate spine lookup data
           if (isset($data['spine_lookup']) && $data['spine_lookup'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], '', $caseID);
           }
           // migrate date ibd questionnaire data loaded
           if (isset($data['ibd_questionnaire_data_loaded']) && $data['ibd_questionnaire_data_loaded'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], '', $caseID);
+          }
+
+          // migrate CPMS accrual activity (rare data migration)
+          if ($this->_dataSource == 'rare_migration' && isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
+            $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', $caseID);
           }
 
           // gdpr request - very likely only used for migration
@@ -369,6 +374,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           if (!empty($data['withdrawn_date']) ||
             ($this->_dataSource == 'strides' && isset($data['withdrawal_request_date']) && !empty($data['withdrawal_request_date']))) {
             $this->withdrawVolunteer($contactId, $data, $this->_dataSource);
+          }
+
+          // ** redundant data - rare migration only
+          if (!empty($data['redundant_date']) and $this->_dataSource == 'rare_migration') {
+            $this->processRedundant($contactId, $data);
           }
 
           // ** deceased
@@ -1078,18 +1088,32 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   private function addNote($contactID, $note, $date)
   {
     if (isset($note) && $note <> '') {
-      if ($date == '') {
-        // use today's date, if no date is given
-        $date = date("Y-m-d");
-      }
-      $insert = "INSERT INTO civicrm_note (entity_table, entity_id, note, contact_id, modified_date) VALUES(%1, %2, %3, %2, %4)";
-      $insertParams = [
-        1 => ["civicrm_contact", "String"],
-        2 => [(int)$contactID, "Integer"],
-        3 => [$note, "String"],
-        4 => [$date, "String"],
+      // only add if note does not already exists; only exact match
+      $query = "SELECT count(*)
+                  from civicrm_note
+                  where entity_id = %1
+                  and note = %2";
+      $queryParams = [
+        1 => [$contactID, "Integer"],
+        2 => [$note, "String"],
       ];
-      CRM_Core_DAO::executeQuery($insert, $insertParams);
+      $cnt = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+
+      if ($cnt == 0) {
+
+        if ($date == '') {
+          // use today's date, if no date is given
+          $date = date("Y-m-d");
+        }
+        $insert = "INSERT INTO civicrm_note (entity_table, entity_id, note, contact_id, modified_date) VALUES(%1, %2, %3, %2, %4)";
+        $insertParams = [
+          1 => ["civicrm_contact", "String"],
+          2 => [(int)$contactID, "Integer"],
+          3 => [$note, "String"],
+          4 => [$date, "String"],
+        ];
+        CRM_Core_DAO::executeQuery($insert, $insertParams);
+      }
     }
   }
 
@@ -1594,7 +1618,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param $dateTime
    * @param null $caseId
    */
-  private function addRecruitmentCaseActivity($contactId, $activityType, $dateTime, $caseId = NULL)
+  private function addRecruitmentCaseActivity($contactId, $activityType, $dateTime, $subject, $caseId = NULL)
   {
     // TODO - check dateTime param has got correct format
 
@@ -1623,6 +1647,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'target_id' => $contactId,
           'case_id' => $caseId,
           'status_id' => "Completed",
+          'subject' => $subject,
         ]);
       } catch (CiviCRM_API3_Exception $ex) {
         $this->_logger->logMessage('inserting $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
@@ -1777,6 +1802,69 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
       }
     }
+
+  private function processRedundant($contactId, $data)
+  {
+    // *** make volunteer redundant
+
+    // only add information if not already done so
+    try {
+      $cnt = civicrm_api3('Activity', 'getcount', [
+        'activity_type_id' => Civi::service('nbrBackbone')->getRedundantActivityTypeId(),
+        'target_contact_id' => $contactId,
+      ]);
+
+    } catch (CiviCRM_API3_Exception $ex) {
+      $this->_logger->logMessage('checking on redundant activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
+    }
+
+    if ($cnt == 0) {
+
+      $activity = new CRM_Nihrbackbone_NbrActivity();
+      $activityParams = ['target_contact_id' => $contactId];
+
+      $activityParams['activity_type_id'] = Civi::service('nbrBackbone')->getRedundantActivityTypeId();
+      $reasonCustomField = "custom_" . Civi::service('nbrBackbone')->getRedundantReasonCustomFieldId();
+      $redundantDestroyDataCustomField = "custom_" . Civi::service('nbrBackbone')->getRedundantDestroyDataCustomFieldId();
+      $redundantDestroySamplesCustomField = "custom_" . Civi::service('nbrBackbone')->getRedundantDestroySamplesCustomFieldId();
+      if (!empty($data['redundant_reason'])) {
+        $activityParams[$reasonCustomField] = $activity->findOrCreateStatusReasonValue("redundant", $data['redundant_reason']);
+      }
+
+      $activityParams[$redundantDestroyDataCustomField] = null;
+      $activityParams[$redundantDestroySamplesCustomField] = null;
+      if ($data['redundant_request_to_destroy_data'] == TRUE) {
+        $activityParams[$redundantDestroyDataCustomField] = 1;
+      }
+      if ($data['redundant_request_to_destroy_samples'] == TRUE) {
+        $activityParams[$redundantDestroySamplesCustomField] = 1;
+      }
+
+      $activityParams['activity_date_time'] = $this->formatActivityDate($data['redundant_date']);
+
+      if (!empty($data['redundant_by'])) {
+        $resourcer = new CRM_Nihrbackbone_NbrResourcer();
+        $sourceContactId = $resourcer->findWithName($data['redundant_by']);
+        if ($sourceContactId) {
+          $activityParams['source_contact_id'] = $sourceContactId;
+        } else {
+          $activityParams['details'] = "Redundant by: " . $data['redundant_by'];
+        }
+      }
+
+      $activityParams['status_id'] = 'Completed';
+
+      $activityParams['priority_id'] = Civi::service('nbrBackbone')->getNormalPriorityId();
+      $activityParams['subject'] = 'Redundant';
+      $new = $activity->createActivity($activityParams);
+      if ($new != TRUE) {
+        CRM_Nihrbackbone_Utils::logMessage($this->_importId, $new, $this->_originalFileName, 'warning');
+      }
+      // set volunteer status to redundant
+      $this->setVolunteerStatus($contactId, Civi::service('nbrBackbone')->getRedundantVolunteerStatus());
+    }
+  }
+
 
   /**
    * Method to set a volunteer to deceased

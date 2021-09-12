@@ -96,16 +96,21 @@
   "withdrawal_confirmation_date": "withdrawal_confirmation_date",
   "withdrawal_initiated_by": "withdrawal_initiated_by",
   "withdrawal_authorising_team": "withdrawal_authorising_team",
+  "request_to_destroy_data": "request_to_destroy_data",
+  "request_to_destroy_samples": "request_to_destroy_samples",
 
   "redundant_by": "redundant_by",
   "redundant_reason": "redundant_reason",
   "redundant_date": "redundant_date",
-  "request_to_destroy_data": "request_to_destroy_data",
-  "request_to_destroy_samples": "request_to_destroy_samples",
+  "redundant_request_to_destroy_data": "redundant_request_to_destroy_data",
+  "redundant_request_to_destroy_samples": "redundant_request_to_destroy_samples",
+
   "death_reported_by": "death_reported_by",
   "death_reported_date": "death_reported_date",
   "deceased": "deceased",
   "deceased_date": "deceased_date",
+
+  "cpms_accrual_date": "cpms_accrual_date",
 
   "gdpr_request_received": "gdpr_request_received",
   "gdpr_sent_to_nbr": "gdpr_sent_to_nbr",
