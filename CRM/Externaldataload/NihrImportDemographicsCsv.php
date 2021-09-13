@@ -199,7 +199,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $data = $this->formatData($data);
 
         // add volunteer or update data of existing volunteer
-        list($contactId, $dataStored, $new_volunteer) = $this->addContact($data);
+        list($contactId, $dataStored, $new_volunteer, $project_identifier) = $this->addContact($data);
         // data is not stored if no local identifier is given or if the existing volunteer has a status
         // other than active or pending
         if ($dataStored) {
@@ -216,7 +216,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $this->addNote($contactId, $data['notes'], $data['notes_date']);
 
           if ($data['panel'] <> '' || $data['site'] <> '' || $data['centre'] <> '') {
-            $this->addPanel($contactId, $data['panel'], $data['site'], $data['centre'], $data['source']);
+            $this->addPanel($contactId, $data['panel'], $data['site'], $data['centre'], $data['source'], $this->_dataSource);
           }
 
           // *** Aliases ***
@@ -271,25 +271,25 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addAlias($contactId, 'cih_type_rare_migration_id', $data['cih_type_rare_migration_id'], 0);
           }
           $aliases = array(
-              'cih_type_bridge_id',
-              'cih_type_genetics_dept_number',
-              'cih_type_oc_subject_id',
-              'cih_type_pedigree_number',
-              'cih_type_rare_study_specific_id',
-              'cih_type_family_id',
-              'cih_type_bpd_cs_id',
-              'cih_type_cpms_id',
-              'cih_type_gold_id',
-              'cih_type_igan_id',
-              'cih_type_imperial_oc_id',
-              'cih_type_medscinet_id',
-              'cih_type_mendelian_id',
-              'cih_type_radar_id',
-              'cih_type_thrombogenomics_id',
-              'cih_type_catgo_pack_id',
-              'cih_type_cuh_pathology_id',
-              'cih_type_gel_id',
-              'cih_type_hospital_number'
+            'cih_type_bridge_id',
+            'cih_type_genetics_dept_number',
+            'cih_type_oc_subject_id',
+            'cih_type_pedigree_number',
+            'cih_type_rare_study_specific_id',
+            'cih_type_family_id',
+            'cih_type_bpd_cs_id',
+            'cih_type_cpms_id',
+            'cih_type_gold_id',
+            'cih_type_igan_id',
+            'cih_type_imperial_oc_id',
+            'cih_type_medscinet_id',
+            'cih_type_mendelian_id',
+            'cih_type_radar_id',
+            'cih_type_thrombogenomics_id',
+            'cih_type_catgo_pack_id',
+            'cih_type_cuh_pathology_id',
+            'cih_type_gel_id',
+            'cih_type_hospital_number'
           );
 
           foreach ($aliases as &$alias) {
@@ -359,26 +359,34 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // migrate CPMS accrual activity (rare data migration)
           if ($this->_dataSource == 'rare_migration' && isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', $caseID);
+            $this->addActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', $caseID);
           }
 
           // gdpr request - very likely only used for migration
           if (isset($data['gdpr_request_received']) && $data['gdpr_request_received'] <> '') {
-            $this->addActivity($contactId, 'nihr_gdpr_request_received', $data['gdpr_request_received']);
+            $this->addActivity($contactId, 'nihr_gdpr_request_received', $data['gdpr_request_received'], '');
           }
           if (isset($data['gdpr_sent_to_nbr']) && $data['gdpr_sent_to_nbr'] <> '') {
-            $this->addActivity($contactId, 'nihr_gdpr_sent_to_nbr', $data['gdpr_sent_to_nbr']);
+            $this->addActivity($contactId, 'nihr_gdpr_sent_to_nbr', $data['gdpr_sent_to_nbr'], '');
           }
 
           // ** withdrawal data
-          if (!empty($data['withdrawn_date']) ||
+          if ((!empty($data['withdrawn_date']) && ($this->_dataSource != 'rare_migration' or $new_volunteer == 1))
+            ||
             ($this->_dataSource == 'strides' && isset($data['withdrawal_request_date']) && !empty($data['withdrawal_request_date']))) {
             $this->withdrawVolunteer($contactId, $data, $this->_dataSource);
+          } elseif ((!empty($data['withdrawn_date']) && $this->_dataSource == 'rare_migration' && $new_volunteer == 0)) {
+            $this->_logger->logMessage('Volunteer ' . $project_identifier . ' (' . $contactId . ') flagged as withdrawn on rare civi but active on orca.', 'WARNING');
           }
 
           // ** redundant data - rare migration only
           if (!empty($data['redundant_date']) and $this->_dataSource == 'rare_migration') {
-            $this->processRedundant($contactId, $data);
+            if ($new_volunteer == 0) {
+              $this->processRedundant($contactId, $data);
+            }
+            else {
+              $this->_logger->logMessage('Volunteer ' . $project_identifier . ' (' . $contactId . ') flagged as redundant on rare civi but active on orca.', 'WARNING');
+            }
           }
 
           // ** deceased
@@ -768,7 +776,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         if (!$volunteer->VolunteerStatusActiveOrPending($contactId, $this->_logger)) {
           $this->_logger->logMessage('volunteer ' . $identifier . ' (' . $contactId .
             ') has status other than active or pending, no data loaded', 'WARNING');
-          return array(0, 0, 0);
+          return array(0, 0, 0, $identifier);
         }
 
         $data['id'] = $contactId;
@@ -798,7 +806,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         // ... but not for HLQ data (as this might be linked to withdrawn volunteers but not deleted from the cum file)
         if($this->_createRecord == 0) {
           $this->_logger->logMessage("$identifier: ID does not exist on the database, no data loaded", 'WARNING');
-          return array(0, 0, 0);
+          return array(0, 0, 0, $identifier);
         }
 
         // for records with missing names (e.g. loading from sample receipts) a fake first name and surname needs to be added
@@ -843,7 +851,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $this->_logger->logMessage('local identifier missing, data not loaded ' . $data['last_name'], 'ERROR');
       $storeData = 0;
     }
-    return array($contactId, $storeData, $new_volunteer);
+    return array($contactId, $storeData, $new_volunteer, $identifier);
   }
 
   /**
@@ -1370,7 +1378,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param $centre
    * @param $source
    */
-  private function addPanel($contactID, $panel, $site, $centre, $source)
+  private function addPanel($contactID, $panel, $site, $centre, $source, $dataSource)
   {
     //
     // ---
@@ -1425,7 +1433,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $countMandatory++;
       }
     }
-    if ($countMandatory < 2) {
+    if ($countMandatory < 2 &&
+      // for rare migration data, only providing the panel without the site is sufficient
+      ($dataSource != 'rare_migration' || $panelData['panel_id'] == '')) {
       $this->_logger->logMessage('No panel information provided for : ' . $contactID, 'ERROR');
       return;
     }
@@ -1549,7 +1559,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param $activityType
    * @param $dateTime
    */
-  private function addActivity($contactId, $activityType, $dateTime)
+  private function addActivity($contactId, $activityType, $dateTime, $subject)
   {
     // &&& todo: only insert if not already in place
     try {
@@ -1557,6 +1567,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         'activity_type_id' => $activityType,
         'activity_date_time' => $dateTime,
         'target_id' => $contactId,
+        'subject' => $subject,
       ]);
     } catch (CiviCRM_API3_Exception $ex) {
       $this->_logger->logMessage('inserting ' . $activityType . ' activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');

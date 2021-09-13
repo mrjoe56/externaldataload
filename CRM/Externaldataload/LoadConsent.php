@@ -68,6 +68,10 @@ class CRM_Externaldataload_LoadConsent
 
           // **** --- add consent to case
           $consentDate = new DateTime($data['consent_date']);
+          $opted_out_of_gel_main = '';
+          if (isset($data['opted_out_of_gel_main']) && !empty($data['opted_out_of_gel_main'])) {
+            $opted_out_of_gel_main = CRM_Core_DAO::VALUE_SEPARATOR.$data['opted_out_of_gel_main'].CRM_Core_DAO::VALUE_SEPARATOR;
+          }
           try {
             $result2 = civicrm_api3('Activity', 'create', [
               'source_contact_id' => "user_contact_id",
@@ -83,7 +87,7 @@ class CRM_Externaldataload_LoadConsent
               'details' => $details,
               $geneticFeedback => $data['genetic_feedback'],
               $pertinentGeneticFeedback => $data['pertinent_genetic_feedback'],
-              $optedOutOfGelMain => $data['opted_out_of_gel_main'],
+              $optedOutOfGelMain => $opted_out_of_gel_main,
               $inviteType => $data['invite_type'],
               'subject' => $subject,
             ]);

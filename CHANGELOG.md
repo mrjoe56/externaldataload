@@ -1,3 +1,7 @@
+## Version 1.17
+* rare migration: fixed opted_out_of_gel_main; only apply redundant/withdrawn activity/status to records not already on orca; allow panel without site
+* CPMS accrual added as stand alone activity
+
 ## Version 1.16
 * rare migration: added CPMS accrual and redundant activities
 * notes: avoid duplicates (exact match only)
