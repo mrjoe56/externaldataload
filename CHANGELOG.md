@@ -1,3 +1,6 @@
+## Version 1.19
+* rare migration: upload data for non active volunteers
+
 ## Version 1.18
 * rare migration: fixed redundant
 

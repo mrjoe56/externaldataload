@@ -773,7 +773,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($contactId) {
         // volunteer already exists
         // do not save data if volunteer is not active or pending
-        if (!$volunteer->VolunteerStatusActiveOrPending($contactId, $this->_logger)) {
+        if (!$volunteer->VolunteerStatusActiveOrPending($contactId, $this->_logger) &&
+          $this->_dataSource != 'rare_migration') {
           $this->_logger->logMessage('volunteer ' . $identifier . ' (' . $contactId .
             ') has status other than active or pending, no data loaded', 'WARNING');
           return array(0, 0, 0, $identifier);
