@@ -381,7 +381,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // ** redundant data - rare migration only
           if (!empty($data['redundant_date']) and $this->_dataSource == 'rare_migration') {
-            if ($new_volunteer == 0) {
+            if ($new_volunteer == 1) {
               $this->processRedundant($contactId, $data);
             }
             else {
