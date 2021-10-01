@@ -1,3 +1,7 @@
+## Version 1.20
+* included data upload for Newcastle BioResource
+* rare migration: moved CPMS activity back to recruitment case; no error checking on DOB
+
 ## Version 1.19
 * rare migration: upload data for non active volunteers
 

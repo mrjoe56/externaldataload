@@ -117,6 +117,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     // check if mapping contains mandatory columns according to source given
     if (($this->_dataSource == 'ucl' && !isset($this->_mapping['cih_type_ucl_local'])) ||
       ($this->_dataSource == 'gstt' && !isset($this->_mapping['cih_type_gstt'])) ||
+      ($this->_dataSource == 'ncl' && !isset($this->_mapping['cih_type_newcastle']) &&
+        !isset($this->_mapping['cih_type_pack_id'])) ||
       ($this->_dataSource == 'ibd' && !isset($this->_mapping['pat_bio_no'])) ||
       ($this->_dataSource == 'strides' && !isset($this->_mapping['cih_type_strides_pid']) &&
           !isset($this->_mapping['cih_type_pack_id_din'])) ||
@@ -321,6 +323,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             case "gstt":
               $this->addAlias($contactId, 'cih_type_gstt', $data['cih_type_gstt'], 0);
 
+            case "ncl":
+              $this->addAlias($contactId, 'cih_type_newcastle', $data['cih_type_newcastle'], 0);
+
               break;
           }
 
@@ -359,7 +364,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // migrate CPMS accrual activity (rare data migration)
           if ($this->_dataSource == 'rare_migration' && isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
-            $this->addActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', $caseID);
           }
 
           // gdpr request - very likely only used for migration
@@ -679,6 +684,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         if($data['cih_type_gstt'] <> '') {
           $identifier_type = 'cih_type_gstt';
           $identifier = $data['cih_type_gstt'];
+        }
+        break;
+      case "ncl":
+        // use national identifier as main identifier
+        if($data['cih_type_newcastle'] <> '') {
+          $identifier_type = 'cih_type_newcastle';
+          $identifier = $data['cih_type_newcastle'];
+        }
+        elseif($data['cih_type_pack_id'] <> '') {
+          $identifier_type = 'cih_type_pack_id';
+          $identifier = $data['cih_type_pack_id'];
+        }
+        else {
+          $this->_logger->logMessage('Neither National ID nor Pack ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       case "cns":
@@ -1992,7 +2011,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         } else {
           // other consents may allow recruitment of children in the future
           // don't accept age = 0 as this might indicate dob = consent date
-          if ($age < 1 || $age > 100) {
+          if (($age < 1 || $age > 100) && $dataSource <> 'rare_migration') {
             $this->_logger->logMessage("$id DOB incorrect, not stored: $dob" , 'WARNING');
             $dob = '';
           }
