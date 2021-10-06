@@ -1662,6 +1662,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     try {
       $cnt = civicrm_api3('Activity', 'getcount', [
         'activity_type_id' => $activityType,
+        'activity_date_time' => $dateTime,
         'target_id' => $contactId,
         'case_id' => $caseId,
       ]);

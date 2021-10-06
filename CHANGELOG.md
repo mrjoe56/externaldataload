@@ -1,3 +1,6 @@
+## Version 1.21
+* rare migration: allow multiple activities with different dates
+
 ## Version 1.20
 * included data upload for Newcastle BioResource
 * rare migration: moved CPMS activity back to recruitment case; no error checking on DOB
