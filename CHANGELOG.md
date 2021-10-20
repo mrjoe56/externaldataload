@@ -1,3 +1,6 @@
+## Version 1.22
+* added HLQ fields willing_to_give_blood, willing_commercial, willing_to_travel
+
 ## Version 1.21
 * rare migration: allow multiple activities with different dates
 

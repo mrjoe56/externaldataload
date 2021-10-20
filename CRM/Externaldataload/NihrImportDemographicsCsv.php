@@ -534,26 +534,23 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
 
       // *** selection eligibility
-      if ($newKey == 'unable_to_travel') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_unable_to_travel', 'id');
+
+      // possible values for willing_to_travel, willing_to_give_blood, willing_commercial are 'yes' or 'no'
+      // NOTE: '1' will be saved as 'yes', but '0' as empty!!
+      if ($newKey == 'willing_to_travel') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_willing_to_travel', 'id');
       }
-      if ($newKey == 'exclude_from_blood_studies') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_no_blood_studies', 'id');
+      if ($newKey == 'willing_to_give_blood') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_willing_to_give_blood', 'id');
       }
-      if ($newKey == 'exclude_from_commercial_studies') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_no_commercial_studies', 'id');
+      if ($newKey == 'willing_commercial') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_willing_commercial', 'id');
       }
       if ($newKey == 'exclude_from_drug_studies') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_no_drug_studies', 'id');
       }
       if ($newKey == 'exclude_from_studies_with_mri') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_no_mri', 'id');
-      }
-      if ($newKey == 'unable_to_travel') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_unable_to_travel', 'id');
-      }
-      if ($newKey == 'unable_to_travel') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_unable_to_travel', 'id');
       }
       if ($newKey == 'genotypic_sex') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_genotypic_sex', 'id');

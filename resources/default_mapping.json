@@ -78,9 +78,13 @@
   "diet": "diet",
   "diet_notes": "diet_notes",
 
-  "unable_to_travel": "unable_to_travel",
-  "exclude_from_blood_studies": "exclude_from_blood_studies",
-  "exclude_from_commercial_studies": "exclude_from_commercial_studies",
+  "unable_to_travel": "unable_to_travel___no_longer_in_use",
+  "willing_to_travel": "willing_to_travel",
+  "exclude_from_blood_studies": "exclude_from_blood_studies___no_longer_in_use",
+  "willing_to_give_blood": "willing_to_give_blood",
+  "exclude_from_commercial_studies": "exclude_from_commercial_studies___no_longer_in_use",
+  "willing_commercial": "willing_commercial",
+
   "exclude_from_drug_studies": "exclude_from_drug_studies",
   "exclude_from_studies_with_mri": "exclude_from_studies_with_mri",
 
