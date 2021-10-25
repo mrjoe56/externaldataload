@@ -1655,14 +1655,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $caseId = CRM_Nihrbackbone_NbrVolunteerCase::getActiveRecruitmentCaseId($contactId);
     }
 
+    $params = [
+      "activity_type_id" => $activityType,
+      "target_id" => $contactId,
+      "case_id" => $caseId,
+    ];
+    if (isset($dateTime) && $dateTime <> '') {
+      $params['activity_date_time'] = $dateTime;
+    }
+
     // only enter if not already on the case
     try {
-      $cnt = civicrm_api3('Activity', 'getcount', [
-        'activity_type_id' => $activityType,
-        'activity_date_time' => $dateTime,
-        'target_id' => $contactId,
-        'case_id' => $caseId,
-      ]);
+      $cnt = civicrm_api3('Activity', 'getcount', $params);
     } catch (CiviCRM_API3_Exception $ex) {
       $this->_logger->logMessage('checking on $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
     }

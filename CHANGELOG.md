@@ -1,3 +1,6 @@
+## Version 1.23
+* addRecruitmentCaseActivity - avoid duplicates (without datetime)
+
 ## Version 1.22
 * added HLQ fields willing_to_give_blood, willing_commercial, willing_to_travel
 
