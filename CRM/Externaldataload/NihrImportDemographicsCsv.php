@@ -231,6 +231,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           if (!empty($data['cih_type_ibd_id'])) {
             $this->addAlias($contactId, 'cih_type_ibd_id', $data['cih_type_ibd_id'], 2);
           }
+          if (!empty($data['cih_type_covid-cns_id'])) {
+            $this->addAlias($contactId, 'cih_type_covid-cns_id', $data['cih_type_covid-cns_id'], 2);
+          }
 
           // STRIDES
           if (!empty($data['cih_type_strides_pid'])) {
@@ -698,9 +701,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         break;
       case "cns":
-        if($data['cih_type_covid_id'] <> '') {
-          $identifier_type = 'cih_type_covid_id';
-          $identifier = $data['cih_type_covid_id'];
+        if($data['cih_type_covid-cns_id'] <> '') {
+          $identifier_type = 'cih_type_covid-cns_id';
+          $identifier = $data['cih_type_covid-cns_id'];
         }
         break;
       case "ibd":
@@ -1672,7 +1675,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
 
     if ($cnt == 0) {
-
       try {
         civicrm_api3('Activity', 'create', [
           'activity_type_id' => $activityType,

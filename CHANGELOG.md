@@ -1,3 +1,6 @@
+## Version 1.24
+* CNS data upload (included COVID CNS ID)
+
 ## Version 1.23
 * addRecruitmentCaseActivity - avoid duplicates (without datetime)
 
