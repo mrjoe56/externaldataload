@@ -1,3 +1,6 @@
+## Version 1.25
+* Newcastle BioResource (NCL) data upload
+
 ## Version 1.24
 * CNS data upload (included COVID CNS ID)
 

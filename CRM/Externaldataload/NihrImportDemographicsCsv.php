@@ -118,7 +118,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (($this->_dataSource == 'ucl' && !isset($this->_mapping['cih_type_ucl_local'])) ||
       ($this->_dataSource == 'gstt' && !isset($this->_mapping['cih_type_gstt'])) ||
       ($this->_dataSource == 'ncl' && !isset($this->_mapping['cih_type_newcastle']) &&
-        !isset($this->_mapping['cih_type_pack_id'])) ||
+        !isset($this->_mapping['cih_type_packid'])) ||
       ($this->_dataSource == 'ibd' && !isset($this->_mapping['pat_bio_no'])) ||
       ($this->_dataSource == 'strides' && !isset($this->_mapping['cih_type_strides_pid']) &&
           !isset($this->_mapping['cih_type_pack_id_din'])) ||
@@ -327,7 +327,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               $this->addAlias($contactId, 'cih_type_gstt', $data['cih_type_gstt'], 0);
 
             case "ncl":
-              $this->addAlias($contactId, 'cih_type_newcastle', $data['cih_type_newcastle'], 0);
+              $this->addAlias($contactId, 'cih_type_newcastle', $data['cih_type_newcastle'], 2);
+              $this->addAlias($contactId, 'cih_type_newcastle_local', $data['cih_type_newcastle_local'], 2);
 
               break;
           }
@@ -687,14 +688,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         break;
       case "ncl":
-        // use national identifier as main identifier
-        if($data['cih_type_newcastle'] <> '') {
+        // either pack ID or national ID is provided
+        if($data['cih_type_packid'] <> '') {
+          $identifier_type = 'cih_type_packid';
+          $identifier = $data['cih_type_packid'];
+        }
+        elseif($data['cih_type_newcastle'] <> '') {
           $identifier_type = 'cih_type_newcastle';
           $identifier = $data['cih_type_newcastle'];
-        }
-        elseif($data['cih_type_pack_id'] <> '') {
-          $identifier_type = 'cih_type_pack_id';
-          $identifier = $data['cih_type_pack_id'];
         }
         else {
           $this->_logger->logMessage('Neither National ID nor Pack ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
