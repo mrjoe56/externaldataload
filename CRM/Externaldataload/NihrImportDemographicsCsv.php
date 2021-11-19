@@ -354,21 +354,27 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // migrate paper questionnaire flag (IBD)
           if (isset($data['nihr_paper_hlq']) && $data['nihr_paper_hlq'] == 'Yes') {
-            $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', 'Completed', $caseID);
           }
 
           // migrate spine lookup data
           if (isset($data['spine_lookup']) && $data['spine_lookup'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], '', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], '', 'Completed', $caseID);
           }
           // migrate date ibd questionnaire data loaded
           if (isset($data['ibd_questionnaire_data_loaded']) && $data['ibd_questionnaire_data_loaded'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], '', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], '', 'Completed', $caseID);
           }
 
-          // migrate CPMS accrual activity (rare data migration)
-          if ($this->_dataSource == 'rare_migration' && isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', $caseID);
+          // migrate CPMS accrual activity (rare data migration) + for IBD volunteers
+          if (isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
+              if($this->_dataSource == 'rare_migration') {
+                $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', 'Completed', $caseID);
+              }
+              elseif($this->_dataSource == 'ibd') {
+                $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'IBD', 'Arrange', $caseID);
+
+              }
           }
 
           // gdpr request - very likely only used for migration
@@ -1650,7 +1656,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param $dateTime
    * @param null $caseId
    */
-  private function addRecruitmentCaseActivity($contactId, $activityType, $dateTime, $subject, $caseId = NULL)
+  private function addRecruitmentCaseActivity($contactId, $activityType, $dateTime, $subject, $status, $caseId = NULL)
   {
     // TODO - check dateTime param has got correct format
 
@@ -1682,7 +1688,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'activity_date_time' => $dateTime,
           'target_id' => $contactId,
           'case_id' => $caseId,
-          'status_id' => "Completed",
+          'status_id' => $status,
           'subject' => $subject,
         ]);
       } catch (CiviCRM_API3_Exception $ex) {

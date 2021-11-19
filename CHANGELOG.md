@@ -1,3 +1,6 @@
+## Version 1.26
+* CPMS accrual activity added for IBD volunteers
+
 ## Version 1.25
 * Newcastle BioResource (NCL) data upload
 
