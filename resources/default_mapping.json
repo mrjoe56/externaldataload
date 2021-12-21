@@ -64,6 +64,9 @@
   "disease_taking_medication": "taking_medication",
   "disease_notes": "disease_notes",
 
+  "medication_starfish_data": "medication_starfish_data",
+  "medication_drug_family": "medication_drug_family",
+
   "alcohol": "alcohol",
   "alcohol_amount": "alcohol_amount",
   "alcohol_notes": "alcohol_notes",

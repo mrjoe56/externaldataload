@@ -1,3 +1,7 @@
+## Version 1.27
+* upload of HLQ data (using participant ID as identifier)
+* upload medication data (starfish migration - free text - and drug families)
+
 ## Version 1.26
 * CPMS accrual activity added for IBD volunteers
 

@@ -126,6 +126,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ($this->_dataSource == 'imid' && !isset($this->_mapping['cih_type_packid'])) ||
       ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id'])) ||
       ($this->_dataSource == 'edgi' && !isset($this->_mapping['cih_type_edgi_id'])) ||
+      ($this->_dataSource == 'hlq' && !isset($this->_mapping['cih_type_participant_id'])) ||
       ($this->_dataSource == 'rare_migration' && !isset($this->_mapping['cih_type_rare_migration_id']))
     ) {
         $this->_logger->logMessage('ID column missing for ' . $this->_dataSource . ' data not loaded', 'ERROR');
@@ -305,6 +306,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // *** Diseases ***
           $this->addDisease($contactId, $data['family_member'], $data['disease'], $data['diagnosis_year'], $data['diagnosis_age'], $data['disease_notes'], $data['taking_medication']);
+
+          // *** Medication data ***
+          // no means to upload medication names so far, but drug families and starfish medication data (free text)
+          if((isset($data['medication_starfish_data']) && !empty($data['medication_starfish_data'])) ||
+            (isset($data['medication_drug_family']) && !empty($data['medication_drug_family']))) {
+            $this->addMedication($contactId, $data['medication_starfish_data'], $data['medication_drug_family']);
+          }
+
 
           // *** add source specific identifiers and data *********************************************************
           switch ($this->_dataSource) {
@@ -769,6 +778,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         else {
           $this->_logger->logMessage('No EDGI ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
+        }
+        break;
+      case "hlq":
+        // cih_type_participant_id
+        if($data['cih_type_participant_id'] <> '') {
+          $identifier_type = 'cih_type_participant_id';
+          $identifier = $data['cih_type_participant_id'];
+          // never create a new record using the participant ID as identifier, only add to existing record
+          $this->_createRecord = 0;
+        }
+        else {
+          $this->_logger->logMessage('No Participant ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       case "rare_migration":
@@ -1340,6 +1361,35 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
     }
   }
+
+  private function addMedication($contactID, $starfishData, $drugFamily)
+  {
+      // --- check if medication already exists ---------------------------------------------------------------------
+      $query = "SELECT count(*)
+                  from civicrm_value_nihr_volunteer_medication
+                  where entity_id = %1
+                  and nvm_starfish_data = %2
+                  and nvm_medication_drug_family = %3";
+      $queryParams = [
+        1 => [$contactID, "Integer"],
+        2 => [$starfishData, "String"],
+        3 => [$drugFamily, "String"],
+      ];
+      $cnt = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+
+      if ($cnt == 0) {
+        // --- insert --------------------------------------------------------------------------------------------
+        $query = "insert into civicrm_value_nihr_volunteer_medication (entity_id, nvm_starfish_data, nvm_medication_drug_family)
+            values (%1,%2,%3)";
+
+        $queryParams = [
+          1 => [$contactID, "Integer"],
+          2 => [$starfishData, "String"],
+          3 => [$drugFamily, "String"]
+        ];
+        CRM_Core_DAO::executeQuery($query, $queryParams);
+      }
+    }
 
   /**
    * Method to get the id of the panel
