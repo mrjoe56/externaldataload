@@ -1,3 +1,6 @@
+## Version 1.28
+* updated addAlias: fixed duplication error (wrike https://www.wrike.com/open.htm?id=814123304)
+
 ## Version 1.27
 * upload of HLQ data (using participant ID as identifier)
 * upload medication data (starfish migration - free text - and drug families)

@@ -1187,18 +1187,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     // *** update=0 - do not update if alias already set
     // *** update=1 - update, if alias exists
-    // *** update=2 - multiple aliases of this type possible, always add
+    // *** update=2 - multiple aliases of this type possible, always add (avoiding duplicates)
 
     if (isset($aliasType) && $aliasType <> '') // todo add check if aliasType exists
     {
-      if (isset($externalID) && $externalID <> '') {
+      if (isset($externalID) && $externalID <> '')
+      {
+        $doInsert = 0;
+
         $table = Civi::service('nbrBackbone')->getContactIdentityTableName();
         $identifierColumn = Civi::service('nbrBackbone')->getIdentifierColumnName();
         $identifierTypeColumn = Civi::service('nbrBackbone')->getIdentifierTypeColumnName();
 
-        // --- check if civicrm_value_contact_id_historyalias already exists ---------------------------------------------------------------------
-        // todo compare on strings removing blanks and special chars
-        $query = "SELECT " . $identifierColumn ." as res_id, count(*) as res_cnt
+        // --- check if civicrm_value_contact_id_history alias TYPE already exists ---------------------------------------------------------------------
+        $query = "SELECT count(*)
                     FROM " . $table . "
                     where entity_id = %1
                     and " . $identifierTypeColumn . " = %2";
@@ -1207,51 +1209,37 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           2 => [$aliasType, "String"],
         ];
 
-        $res = CRM_Core_DAO::executeQuery($query, $queryParams);
-        if ($res->fetch()) {
-          $dbExternalID = $res->res_id;
-          if ($res->res_cnt > 1) {
-            // already multi alias on db - check if given one is there
-            $query2 = "SELECT ifnull(" . $identifierColumn . ", '') as res_id
+        $cnt = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+        if ($cnt > 0)
+        {
+          // identifier type exists, check if given identifier is already on the database
+          $id = strtolower(str_replace(' ', '', $externalID));
+          $query2 = "SELECT count(*)
                     FROM " . $table . "
                     where entity_id = %1
                     and " . $identifierTypeColumn . " = %2
-                    and " . $identifierColumn . " = %3";
-            $queryParams2 = [
-              1 => [$contactID, "Integer"],
-              2 => [$aliasType, "String"],
-              3 => [$externalID, "String"],
-            ];
-            $dbExternalID = CRM_Core_DAO::singleValueQuery($query2, $queryParams2);
-          }
+                    and lower(replace(" . $identifierColumn . ", ' ', '')) = %3";
+          $queryParams2 = [
+            1 => [$contactID, "Integer"],
+            2 => [$aliasType, "String"],
+            3 => [$id, "String"],
+          ];
+          $cnt2 = CRM_Core_DAO::singleValueQuery($query2, $queryParams2);
 
-          if (!isset($dbExternalID) || ($update == 2 and $dbExternalID <> $externalID)) {
-            // --- no alias of this type exists, insert -------------------------------------------
-            // --- OR update
-
+          if ($cnt2 == 0) {
             if ($aliasType == 'cih_type_nhs_number') {
               // todo check if nhs number format is correct (subroutine to be written by JB)
             }
-            try {
-              $query = "insert into " . $table . " (entity_id, " . $identifierTypeColumn . ", " . $identifierColumn . ", used_since)
-                               values (%1,%2,%3, current_timestamp())";
-              $queryParams = [
-                1 => [$contactID, "Integer"],
-                2 => [$aliasType, "String"],
-                3 => [$externalID, "String"],
-              ];
-              CRM_Core_DAO::executeQuery($query, $queryParams);
-            } catch (Exception $ex) {
-            }
-          } elseif (isset($dbExternalID) && $dbExternalID <> $externalID) {
             if ($update == 0) {
               $this->_logger->logMessage("Contact ID $contactID: different identifier for $aliasType provided, not updated.", 'WARNING');
-            } elseif ($update == 1) {
+            }
+            elseif ($update == 1) {
+              // update identifier
               try {
                 $query = "update " . $table . "
                         set " . $identifierColumn . " = %1, used_since = current_timestamp()
                         where entity_id = %2
-                        and ". $identifierTypeColumn . " = %3";
+                        and " . $identifierTypeColumn . " = %3";
                 $queryParams = [
                   1 => [$externalID, "String"],
                   2 => [$contactID, "Integer"],
@@ -1260,7 +1248,25 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
                 CRM_Core_DAO::executeQuery($query, $queryParams);
               } catch (Exception $ex) {
               }
+            } else {
+              // insert
+              $doInsert = 1;
             }
+          }
+        }
+
+        if ($cnt == 0 || $doInsert == 1) {
+          // insert alias if type does not exist or if multiples are allowed
+          try {
+            $query = "insert into " . $table . " (entity_id, " . $identifierTypeColumn . ", " . $identifierColumn . ", used_since)
+                             values (%1,%2,%3, current_timestamp())";
+            $queryParams = [
+              1 => [$contactID, "Integer"],
+              2 => [$aliasType, "String"],
+              3 => [$externalID, "String"],
+            ];
+            CRM_Core_DAO::executeQuery($query, $queryParams);
+          } catch (Exception $ex) {
           }
         }
       }
