@@ -197,5 +197,7 @@
   "pat_bio_no": "pat_bio_no",
 
   "temporarily_non_recallable": "temporarily_non_recallable",
-  "non_recallable_reason": "non_recallable_reason"
+  "non_recallable_reason": "non_recallable_reason",
+
+  "guardian": "guardian"
 }
