@@ -49,6 +49,8 @@ class CRM_Externaldataload_LoadConsent
           $pertinentGeneticFeedback = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_pertinent_genetic_feedback', 'id');
           $optedOutOfGelMain = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_opted_out_of_gel_main', 'id');
           $inviteType = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_invite_type', 'id');
+          $consentType = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consent_type', 'id');
+          $assentFormCompleted = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_assent_form_completed', 'id');
 
           // consent not yet on Civi - add
           // *** check if 'consented by' has got a 'BioResourcer' record; if not, add name to details
@@ -90,6 +92,8 @@ class CRM_Externaldataload_LoadConsent
               $optedOutOfGelMain => $opted_out_of_gel_main,
               $inviteType => $data['invite_type'],
               'subject' => $subject,
+              $consentType => $data['consent_type'],
+              $assentFormCompleted => $data['assent_form_completed'],
             ]);
           } catch (CiviCRM_API3_Exception $ex) {
             $logger->logMessage('Error message when adding volunteer consent ' . $contactId . ' ' . $ex->getMessage(), 'error');

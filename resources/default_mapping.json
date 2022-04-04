@@ -12,6 +12,7 @@
   "previous_names": "previous_names",
   "dob": "birth_date",
   "gender": "gender_id",
+  "gender_at_birth": "gender_at_birth",
   "genotypic_sex": "genotypic_sex",
   "email": "email",
   "paper_questionnaire": "nihr_paper_hlq",
@@ -33,10 +34,12 @@
   "consent_version": "consent_version",
   "consent_form_status": "consent_status",
   "consented_by": "consented_by",
+  "consent_type": "consent_type",
   "information_leaflet_version": "information_leaflet_version",
   "genetic_feedback": "genetic_feedback",
   "pertinent_genetic_feedback": "pertinent_genetic_feedback",
   "opted_out_of_gel_main": "opted_out_of_gel_main",
+  "assent_form_completed": "assent_form_completed",
 
   "invite_type": "invite_type",
   "ethnicity": "ethnicity",
@@ -186,6 +189,8 @@
   "cih_type_catgo_pack_id": "cih_type_catgo_pack_id",
   "cih_type_cuh_pathology_id": "cih_type_cuh_pathology_id",
   "cih_type_gel_id": "cih_type_gel_id",
+
+  "cih_type_guardian_id": "cih_type_guardian_id",
 
   "contact_category": "contact_category",
   "contact_location": "contact_location",

@@ -14,15 +14,28 @@ function civicrm_api3_nihr_import_csv_Loaddemographics($params) {
 
   // get the csv import and processed folders
   $folder = 'nbr_folder_'.$params['dataSource'];
+
+  ## &&& fix with next update of nbrcivisettings
+  if ($params['dataSource'] == 'pibd') {
+    $folder = 'nbr_folder_guardian';
+  }
   $loadFolder = Civi::settings()->get($folder);
   if ($loadFolder && !empty($loadFolder)) {
     // 1) upload PID data file
     processFile($loadFolder, $params['dataSource'] . '_pid_data_export*', $params);
     // 2) contact data
     processFile($loadFolder, $params['dataSource'] . '_contacts_export*', $params);
+
+    if ($params['dataSource'] == 'pibd') {
+      // in addition to the volunteer data files (aka children's data) load the guardian data as well
+      processFile($loadFolder, $params['dataSource'] . '_guardian_pid_data_export*', $params);
+      processFile($loadFolder, $params['dataSource'] . '_guardian_contacts_export*', $params);
+    }
+
     // 3) hlq data - do not create new records for these data files!
     $params['createRecord'] = 0;
     processFile($loadFolder, $params['dataSource'] . '_hlq_export*', $params);
+
   }
   else {
     throw new API_Exception(E::ts('Folder for import (' . $folder . ') not found or empty'),  1001);

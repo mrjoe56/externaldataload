@@ -316,15 +316,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           // *** add source specific identifiers and data *********************************************************
           switch ($this->_dataSource) {
             case "ibd":
+            case "pibd":
               if ($data['diagnosis'] <> '') {
                 $this->addDisease($contactId, 'family_member_self', $data['diagnosis'], '', '', '', '');
               }
               if ($data['cih_type_ibdgc_number'] <> '') {
                 $this->addAlias($contactId, 'cih_type_ibdgc_number', $data['cih_type_ibdgc_number'], 1);
               }
-              if ($data['panel'] == 'PIBD') {
+              if ($data['cih_type_guardian_id'] <> '') {
+                $this->addAlias($contactId, 'cih_type_guardian_id', $data['cih_type_guardian_id'], 2);
+              }
+
+              if (isset($data['guardian_of']) and $data['guardian_of'] <> '') {
                 // create link to guardian record
-                $this->addRelationship($contactId, $data['guardian'], 'nbr_guardian_is');
+                $this->addRelationship($contactId, $data['guardian_of'], 'nbr_guardian_of');
               }
               break;
 
@@ -348,7 +353,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           // *** regardless if volunteer is new (might be missing in existing record) - check if recruitment
           // *** case exists and retrieve ID
           //$caseID = CRM_Nihrbackbone_NbrVolunteerCase::getActiveRecruitmentCaseId($contactId);
-          if ($this->_dataSource <> 'guardian') {
+          if ($data['contact_sub_type'] <> 'nbr_guardian') {
             $caseID = $this->createRecruitmentCase($contactId, $data['consent_date']);
           }
 
@@ -357,7 +362,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           if (isset($data['consent_version']) && $data['consent_version'] <> '') {
             $nbrConsent = new CRM_Externaldataload_LoadConsent();
             $consent_status = 'consent_form_status_correct';
-            if ($this->_dataSource == 'ibd') {
+            if ($this->_dataSource == 'ibd' ||
+              ($this->_dataSource == 'pibd' && $data['consent_type'] == 'consent_type_face_to_face')) {
               $consent_status = 'consent_form_status_not_valid';
             }
             $nbrConsent->addConsent($contactId, $caseID, $consent_status, 'Consent', $data, $this->_logger);
@@ -573,6 +579,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($newKey == 'genotypic_sex') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_genotypic_sex', 'id');
       }
+      if ($newKey == 'gender_at_birth') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_gender_at_birth', 'id');
+      }
 
 
       if ($newKey == 'non_recallable_reason') {
@@ -664,8 +673,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     $data['contact_type'] = 'Individual';
     $data['contact_sub_type'] = 'nihr_volunteer';
 
-    if ($this->_dataSource == 'guardian') {
-      $data['contact_sub_type'] = 'nihr_guardian';
+    if ($this->_dataSource == 'pibd' && isset($data['cih_type_guardian_id']) && $data['cih_type_guardian_id'] <> '')  {
+      $data['contact_sub_type'] = 'nbr_guardian';
     }
 
     // NOTE: these two settings are only used for migration and only have any effect if the numbergenerator
@@ -724,6 +733,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         break;
       case "ibd":
+      case "pibd":
         if (!empty($data['pat_bio_no'])) {
           $identifier = $data['pat_bio_no'];
           if (strpos($identifier, 'IBD') !== false) {
@@ -731,8 +741,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           } else {
             $identifier_type = 'cih_type_packid';
           }
+        } elseif (!empty($data['cih_type_guardian_id'])) {
+          $identifier = $data['cih_type_guardian_id'];
+          $identifier_type = 'cih_type_guardian_id';
         } else {
-          $this->_logger->logMessage('IBD project ID missing, no data loaded: ' . $data['last_name'], 'ERROR');
+          $this->_logger->logMessage('IBD/PIBD project ID missing, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       case "strides":
@@ -746,9 +759,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         } else {
           $this->_logger->logMessage('Neither STRIDES pid nor pack ID provided, no data loaded: ' . $data['last_name'] . ' ' . $data['cih_type_blood_donor_id'], 'ERROR');
         }
-        break;
-      case "guardian":
-        // no id provided, duplication check only via data
         break;
       case "nafld":
       case "imid":
@@ -814,6 +824,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $contactId = $volunteer->findVolunteer($data, $this->_logger);
         }
       } else {
+        // not used at the moment - left that code as it might be used for YP
         $contactId = $this->findGuardian($data, $this->_logger);
       }
 
@@ -865,7 +876,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         // set volunteer status to 'pending' for IBD and 'active' for other projects
         $volunteerStatus = 'volunteer_status_active';
-        if ($this->_dataSource == 'ibd') {
+        if ($this->_dataSource == 'ibd' ||
+          ($this->_dataSource == 'pibd' && $data['consent_type'] == 'consent_type_face_to_face')) {
           $volunteerStatus = 'volunteer_status_pending';
         }
 
@@ -2148,7 +2160,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           select count(*) as cnt, c.id as id
           from civicrm_contact c, civicrm_address a, civicrm_phone p
           where c.contact_type = 'Individual'
-          -- and c.contact_sub_type = 'nihr_guardian'
+          -- and c.contact_sub_type = 'nbr_guardian'
           and c.first_name = %1
           and c.last_name = %2
           and c.id = a.contact_id
@@ -2186,7 +2198,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           select count(*) as cnt, c.id as id
           from civicrm_contact c, civicrm_address a, civicrm_email e
           where c.contact_type = 'Individual'
-          -- and c.contact_sub_type = 'nihr_guardian'
+          -- and c.contact_sub_type = 'nbr_guardian'
           and c.first_name = %1
           and c.last_name = %2
           and c.id = a.contact_id
@@ -2223,30 +2235,37 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     return $id;
   }
 
-  public function addRelationship($contactId, $contactId2, $relationshipType)
+  public function addRelationship($contactId, $contact2, $relationshipType)
   {
-    // test if second contactId is part of orca and a guardian, if relationshipType is 'guardian'
-    $sql = "select count(*) as cnt
-            from civicrm_contact c
+    // test if second contact is on orca and retrieve the contact ID
+    $sql = "select count(*) as cnt, c.id as id2
+            from civicrm_contact c, civicrm_value_contact_id_history h
             where c.contact_type = 'Individual'
-            and c.id = %1";
+            and c.id = h.entity_id
+            and h.identifier = %1";
 
-    if ($relationshipType == 'nbr_guardian_is') {
-      $sql .= " and c.contact_sub_type = 'nihr_guardian'";
-    }
+    /* if ($relationshipType == 'nbr_guardian_of') {
+      $sql .= " and c.contact_sub_type = 'nbr_guardian'";
+    } */
 
     $queryParams = [
-      1 => [$contactId2, 'Integer'],
+      1 => [$contact2, 'String'],
     ];
 
     try {
-      $cnt = CRM_Core_DAO::singleValueQuery($sql, $queryParams);
+      $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
+      if ($xdata->fetch()) {
+        $cnt = $xdata->cnt;
+        $id2 = $xdata->id2;
+      }
     } catch (Exception $ex) {
       $this->_logger->logMessage("$contactId2 retrieving ID to create relationship failed: " . $ex->getMessage(), 'ERROR');
     }
 
     if ($cnt == 0) {
-      $this->_logger->logMessage("$contactId relationship ID $contactId2 does not exist", 'ERROR');
+      $this->_logger->logMessage("$contact2 does not exist on orca, could not create relationship", 'ERROR');
+    } elseif ($cnt > 1) {
+      $this->_logger->logMessage("$contact2 is duplicated on orca, could not create relationship", 'ERROR');
     } else {
       try {
         $sql = "select id from civicrm_relationship_type where name_a_b = '$relationshipType'";
@@ -2254,7 +2273,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         civicrm_api3('Relationship', 'create', [
           'contact_id_a' => $contactId,
-          'contact_id_b' => $contactId2,
+          'contact_id_b' => $id2,
           'relationship_type_id' => $relTypeId,
         ]);
       } catch (CiviCRM_API3_Exception $ex) {
