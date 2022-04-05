@@ -882,7 +882,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
 
         // give warning if consent is missing for new records
-        if (!isset($data['consent_date']) || $data['consent_date'] == '') {
+        if ((!isset($data['consent_date']) || $data['consent_date'] == '') &&
+          $data['contact_sub_type'] == 'nihr_volunteer') {
           $this->_logger->logMessage("$identifier: consent missing", 'WARNING');
         }
         $volunteerStatusCustomField = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerStatusCustomField('nvs_volunteer_status', 'id');
@@ -2279,7 +2280,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'relationship_type_id' => $relTypeId,
         ]);
       } catch (CiviCRM_API3_Exception $ex) {
-        $this->_logger->logMessage("$contactId failed to create relationship: " . $ex->getMessage(), 'ERROR');
+        // not checked if relationship is already in place...
+        if($ex->getMessage() <> 'Duplicate Relationship') {
+          $this->_logger->logMessage("$contactId failed to create relationship: " . $ex->getMessage(), 'ERROR');
+        }
       }
     }
   }
