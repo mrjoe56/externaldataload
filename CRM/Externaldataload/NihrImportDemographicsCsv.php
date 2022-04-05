@@ -2268,12 +2268,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $this->_logger->logMessage("$contact2 is duplicated on orca, could not create relationship", 'ERROR');
     } else {
       try {
-        $sql = "select id from civicrm_relationship_type where name_a_b = '$relationshipType'";
+        $sql = "select id from civicrm_relationship_type where name_b_a = '$relationshipType'";
         $relTypeId = CRM_Core_DAO::singleValueQuery($sql);
 
+        // NOTE: this creates the relationship 'backwards', using name_B_A (rather than name_a_b)
+        // rewrite if used for any other relationships
         civicrm_api3('Relationship', 'create', [
-          'contact_id_a' => $contactId,
-          'contact_id_b' => $id2,
+          'contact_id_a' => $id2,
+          'contact_id_b' => $contactId,
           'relationship_type_id' => $relTypeId,
         ]);
       } catch (CiviCRM_API3_Exception $ex) {
