@@ -1479,6 +1479,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $siteAliasTypeValue = "nbr_site_alias_type_ibd";
     } elseif ($panel == 'STRIDES') {
       $siteAliasTypeValue = "nbr_site_alias_type_strides";
+    } elseif ($panel == 'PIBD') {
+      $siteAliasTypeValue = "nbr_site_alias_type_pibd";
     }
 
     $panelData = [];
@@ -2260,7 +2262,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $id2 = $xdata->id2;
       }
     } catch (Exception $ex) {
-      $this->_logger->logMessage("$contactId2 retrieving ID to create relationship failed: " . $ex->getMessage(), 'ERROR');
+      $this->_logger->logMessage("$contact2 retrieving ID to create relationship failed: " . $ex->getMessage(), 'ERROR');
     }
 
     if ($cnt == 0) {
