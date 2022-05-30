@@ -222,7 +222,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // *** Aliases ***
           if (!empty($data['cih_type_nhs_number'])) {
-            $this->addAlias($contactId, 'cih_type_nhs_number', $data['cih_type_nhs_number'], 1);
+            $this->addAlias($contactId, 'cih_type_nhs_number', $data['cih_type_nhs_number'], 0);
           }
           if (!empty($data['cih_type_packid'])) {
             $this->addAlias($contactId, 'cih_type_packid', $data['cih_type_packid'], 2);
