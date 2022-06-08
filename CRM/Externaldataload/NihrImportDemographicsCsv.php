@@ -352,7 +352,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           // *** all recruitment information is stored in one recruitment case *************************
           // *** regardless if volunteer is new (might be missing in existing record) - check if recruitment
           // *** case exists and retrieve ID
-          //$caseID = CRM_Nihrbackbone_NbrVolunteerCase::getActiveRecruitmentCaseId($contactId);
+          //$caseId = CRM_Nihrbackbone_NbrRecruitmentCase::getActiveRecruitmentCaseId($contactId);
           if ($data['contact_sub_type'] <> 'nbr_guardian') {
             $caseID = $this->createRecruitmentCase($contactId, $data['consent_date']);
           }
@@ -1672,7 +1672,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (isset($dateTime) && $dateTime <> '') {
       $params['activity_date_time'] = $dateTime;
     }
-    
+
     try {
       $cnt = civicrm_api3('Activity', 'getcount', $params);
     } catch (CiviCRM_API3_Exception $ex) {
@@ -1756,7 +1756,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     // get latest recruitment case for contact, if not provided
     if (is_null($caseId)) {
-      $caseId = CRM_Nihrbackbone_NbrVolunteerCase::getActiveRecruitmentCaseId($contactId);
+      $caseId = CRM_Nihrbackbone_NbrRecruitmentCase::getActiveRecruitmentCaseId($contactId);
     }
 
     $params = [
