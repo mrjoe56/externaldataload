@@ -1,3 +1,6 @@
+## Version 1.33
+* fix to previous version
+
 ## Version 1.32
 * added generic functionality to upload activities and recruitment case activities
 
