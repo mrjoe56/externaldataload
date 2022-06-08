@@ -371,34 +371,34 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // migrate paper questionnaire flag (IBD)
           if (isset($data['nihr_paper_hlq']) && $data['nihr_paper_hlq'] == 'Yes') {
-            $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', 'Completed', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', 'Completed', '', $caseID);
           }
 
           // migrate spine lookup data
           if (isset($data['spine_lookup']) && $data['spine_lookup'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], '', 'Completed', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], '', 'Completed', '', $caseID);
           }
           // migrate date ibd questionnaire data loaded
           if (isset($data['ibd_questionnaire_data_loaded']) && $data['ibd_questionnaire_data_loaded'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], '', 'Completed', $caseID);
+            $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], '', 'Completed', '', $caseID);
           }
 
           // migrate CPMS accrual activity (rare data migration) + for IBD volunteers
           if (isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
             if ($this->_dataSource == 'rare_migration') {
-              $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', 'Completed', $caseID);
+              $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', 'Completed', '', $caseID);
             } elseif ($this->_dataSource == 'ibd') {
-              $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'IBD', 'Arrange', $caseID);
+              $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'IBD', 'Arrange', '', $caseID);
 
             }
           }
 
           // gdpr request - very likely only used for migration
           if (isset($data['gdpr_request_received']) && $data['gdpr_request_received'] <> '') {
-            $this->addActivity($contactId, 'nihr_gdpr_request_received', $data['gdpr_request_received'], '');
+            $this->addActivity($contactId, 'nihr_gdpr_request_received', $data['gdpr_request_received'], '', 'Completed', '');
           }
           if (isset($data['gdpr_sent_to_nbr']) && $data['gdpr_sent_to_nbr'] <> '') {
-            $this->addActivity($contactId, 'nihr_gdpr_sent_to_nbr', $data['gdpr_sent_to_nbr'], '');
+            $this->addActivity($contactId, 'nihr_gdpr_sent_to_nbr', $data['gdpr_sent_to_nbr'], '', 'Completed', '');
           }
 
           // ** withdrawal data
@@ -457,6 +457,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             } elseif ($data['temporarily_non_recallable'] == 'No' || $data['temporarily_non_recallable'] == '') {
               $this->removeTag($contactId, 'Temporarily non-recallable');
             }
+          }
+          // activities
+          if (isset($data['activity']) && !empty($data['activity'])) {
+            $this->addActivity($contactId, $data['activity'], $data['activity_datetime'],
+                $data['activity_subject'], $data['activity_status'], $data['activity_location']);
+          }
+          if (isset($data['rec_activity']) && !empty($data['rec_activity'])) {
+            $this->addRecruitmentCaseActivity($contactId, $data['rec_activity'], $data['rec_activity_datetime'],
+              $data['rec_activity_subject'], $data['rec_activity_status'], $data['rec_activity_location']);
           }
         }
       }
@@ -1653,18 +1662,36 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param $activityType
    * @param $dateTime
    */
-  private function addActivity($contactId, $activityType, $dateTime, $subject)
+  private function addActivity($contactId, $activityType, $dateTime, $subject, $status, $location)
   {
-    // &&& todo: only insert if not already in place
+    // only enter if not already on the volunteer record
+    $params = [
+      "activity_type_id" => $activityType,
+      "target_id" => $contactId,
+    ];
+    if (isset($dateTime) && $dateTime <> '') {
+      $params['activity_date_time'] = $dateTime;
+    }
+    
     try {
-      civicrm_api3('Activity', 'create', [
-        'activity_type_id' => $activityType,
-        'activity_date_time' => $dateTime,
-        'target_id' => $contactId,
-        'subject' => $subject,
-      ]);
+      $cnt = civicrm_api3('Activity', 'getcount', $params);
     } catch (CiviCRM_API3_Exception $ex) {
-      $this->_logger->logMessage('inserting ' . $activityType . ' activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
+      $this->_logger->logMessage('checking on $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
+    }
+
+    if ($cnt == 0) {
+      try {
+        civicrm_api3('Activity', 'create', [
+          'activity_type_id' => $activityType,
+          'activity_date_time' => $dateTime,
+          'target_id' => $contactId,
+          'subject' => $subject,
+          'status_id' => $status,
+          'location' => $location
+        ]);
+      } catch (CiviCRM_API3_Exception $ex) {
+        $this->_logger->logMessage('inserting ' . $activityType . ' activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');
+      }
     }
   }
 
@@ -1723,7 +1750,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    * @param $dateTime
    * @param null $caseId
    */
-  private function addRecruitmentCaseActivity($contactId, $activityType, $dateTime, $subject, $status, $caseId = NULL)
+  private function addRecruitmentCaseActivity($contactId, $activityType, $dateTime, $subject, $status, $location, $caseId = NULL)
   {
     // TODO - check dateTime param has got correct format
 
@@ -1757,6 +1784,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           'case_id' => $caseId,
           'status_id' => $status,
           'subject' => $subject,
+          'location' => $location
         ]);
       } catch (CiviCRM_API3_Exception $ex) {
         $this->_logger->logMessage('inserting $activityType activity for volunteer ' . $contactId . ': ' . $ex->getMessage(), 'ERROR');

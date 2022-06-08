@@ -1,3 +1,6 @@
+## Version 1.32
+* generic functionality to upload activities and recruitment case activities
+
 ## Version 1.31
 * NHS number not to be updated
 
