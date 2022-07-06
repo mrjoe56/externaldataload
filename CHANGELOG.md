@@ -1,3 +1,7 @@
+## Version 1.34
+* include panel and ID into subject line for consent
+* upload of SLaM BioResource data
+
 ## Version 1.33
 * fix to previous version
 

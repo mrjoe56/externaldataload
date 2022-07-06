@@ -126,6 +126,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ($this->_dataSource == 'imid' && !isset($this->_mapping['cih_type_packid'])) ||
       ($this->_dataSource == 'glad' && !isset($this->_mapping['cih_type_glad_id'])) ||
       ($this->_dataSource == 'edgi' && !isset($this->_mapping['cih_type_edgi_id'])) ||
+      ($this->_dataSource == 'slam' && !isset($this->_mapping['cih_type_slam'])) ||
       ($this->_dataSource == 'hlq' && !isset($this->_mapping['cih_type_participant_id'])) ||
       ($this->_dataSource == 'rare_migration' && !isset($this->_mapping['cih_type_rare_migration_id']))
     ) {
@@ -366,7 +367,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               ($this->_dataSource == 'pibd' && $data['consent_type'] == 'consent_type_face_to_face')) {
               $consent_status = 'consent_form_status_not_valid';
             }
-            $nbrConsent->addConsent($contactId, $caseID, $consent_status, 'Consent', $data, $this->_logger);
+            $subject = "Consent ".$data['panel']." $project_identifier";
+            $nbrConsent->addConsent($contactId, $caseID, $consent_status, $subject, $data, $this->_logger);
           }
 
           // migrate paper questionnaire flag (IBD)
@@ -795,6 +797,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $identifier = $data['cih_type_edgi_id'];
         } else {
           $this->_logger->logMessage('No EDGI ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
+        }
+        break;
+      case "slam":
+        // cih_type_slam
+        if ($data['cih_type_slam'] <> '') {
+          $identifier_type = 'cih_type_slam';
+          $identifier = $data['cih_type_slam'];
+        } else {
+          $this->_logger->logMessage('No SLAM ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       case "hlq":
