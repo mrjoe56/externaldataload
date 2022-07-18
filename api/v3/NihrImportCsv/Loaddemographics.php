@@ -15,10 +15,6 @@ function civicrm_api3_nihr_import_csv_Loaddemographics($params) {
   // get the csv import and processed folders
   $folder = 'nbr_folder_'.$params['dataSource'];
 
-  ## &&& fix with next update of nbrcivisettings
-  if ($params['dataSource'] == 'pibd') {
-    $folder = 'nbr_folder_guardian';
-  }
   $loadFolder = Civi::settings()->get($folder);
   if ($loadFolder && !empty($loadFolder)) {
     // 1) upload PID data file

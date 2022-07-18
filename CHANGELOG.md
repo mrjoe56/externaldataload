@@ -1,3 +1,6 @@
+## Version 1.35
+* updates to support PIBD data load (folder name change, Inception panel)
+
 ## Version 1.34
 * include panel and ID into subject line for consent
 * upload of SLaM BioResource data

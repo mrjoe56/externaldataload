@@ -1499,7 +1499,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $siteAliasTypeValue = "nbr_site_alias_type_ibd";
     } elseif ($panel == 'STRIDES') {
       $siteAliasTypeValue = "nbr_site_alias_type_strides";
-    } elseif ($panel == 'PIBD') {
+    } elseif ($panel == 'PIBD'  || $panel == 'PIBD Inception') {
       $siteAliasTypeValue = "nbr_site_alias_type_pibd";
     }
 
