@@ -231,8 +231,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           if (!empty($data['cih_type_ibd_id'])) {
             $this->addAlias($contactId, 'cih_type_ibd_id', $data['cih_type_ibd_id'], 2);
           }
-          if (!empty($data['cih_type_covid-cns_id'])) {
-            $this->addAlias($contactId, 'cih_type_covid-cns_id', $data['cih_type_covid-cns_id'], 2);
+          if (!empty($data['cih_type_covid_cns_id'])) {
+            $this->addAlias($contactId, 'cih_type_covid_cns_id', $data['cih_type_covid_cns_id'], 2);
           }
 
           // STRIDES
@@ -342,12 +342,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
             case "gstt":
               $this->addAlias($contactId, 'cih_type_gstt', $data['cih_type_gstt'], 0);
+              break;
 
             case "ncl":
               $this->addAlias($contactId, 'cih_type_newcastle', $data['cih_type_newcastle'], 2);
               $this->addAlias($contactId, 'cih_type_newcastle_local', $data['cih_type_newcastle_local'], 2);
 
               break;
+
           }
 
           // *** all recruitment information is stored in one recruitment case *************************
@@ -356,42 +358,42 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           //$caseId = CRM_Nihrbackbone_NbrRecruitmentCase::getActiveRecruitmentCaseId($contactId);
           if ($data['contact_sub_type'] <> 'nbr_guardian') {
             $caseID = $this->createRecruitmentCase($contactId, $data['consent_date']);
-          }
 
-          // add consent to recruitment case
-          // NOTE: status 'not valid' is set for IBD - call might need to be updated for other projects
-          if (isset($data['consent_version']) && $data['consent_version'] <> '') {
-            $nbrConsent = new CRM_Externaldataload_LoadConsent();
-            $consent_status = 'consent_form_status_correct';
-            if ($this->_dataSource == 'ibd' ||
-              ($this->_dataSource == 'pibd' && $data['consent_type'] == 'consent_type_face_to_face')) {
-              $consent_status = 'consent_form_status_not_valid';
+
+            // add consent to recruitment case
+            // NOTE: status 'not valid' is set for IBD - call might need to be updated for other projects
+            if (isset($data['consent_version']) && $data['consent_version'] <> '') {
+              $nbrConsent = new CRM_Externaldataload_LoadConsent();
+              $consent_status = 'consent_form_status_correct';
+              if ($this->_dataSource == 'ibd' ||
+                ($this->_dataSource == 'pibd' && $data['consent_type'] == 'consent_type_face_to_face')) {
+                $consent_status = 'consent_form_status_not_valid';
+              }
+              $subject = "Consent " . $data['panel'] . " $project_identifier";
+              $nbrConsent->addConsent($contactId, $caseID, $consent_status, $subject, $data, $this->_logger);
             }
-            $subject = "Consent ".$data['panel']." $project_identifier";
-            $nbrConsent->addConsent($contactId, $caseID, $consent_status, $subject, $data, $this->_logger);
-          }
 
-          // migrate paper questionnaire flag (IBD)
-          if (isset($data['nihr_paper_hlq']) && $data['nihr_paper_hlq'] == 'Yes') {
-            $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', 'Completed', '', $caseID);
-          }
+            // migrate paper questionnaire flag (IBD)
+            if (isset($data['nihr_paper_hlq']) && $data['nihr_paper_hlq'] == 'Yes') {
+              $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', 'Completed', '', $caseID);
+            }
 
-          // migrate spine lookup data
-          if (isset($data['spine_lookup']) && $data['spine_lookup'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], '', 'Completed', '', $caseID);
-          }
-          // migrate date ibd questionnaire data loaded
-          if (isset($data['ibd_questionnaire_data_loaded']) && $data['ibd_questionnaire_data_loaded'] <> '') {
-            $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], '', 'Completed', '', $caseID);
-          }
+            // migrate spine lookup data
+            if (isset($data['spine_lookup']) && $data['spine_lookup'] <> '') {
+              $this->addRecruitmentCaseActivity($contactId, 'spine_lookup', $data['spine_lookup'], '', 'Completed', '', $caseID);
+            }
+            // migrate date ibd questionnaire data loaded
+            if (isset($data['ibd_questionnaire_data_loaded']) && $data['ibd_questionnaire_data_loaded'] <> '') {
+              $this->addRecruitmentCaseActivity($contactId, 'ibd_questionnaire_data_loaded', $data['ibd_questionnaire_data_loaded'], '', 'Completed', '', $caseID);
+            }
 
-          // migrate CPMS accrual activity (rare data migration) + for IBD volunteers
-          if (isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
-            if ($this->_dataSource == 'rare_migration') {
-              $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', 'Completed', '', $caseID);
-            } elseif ($this->_dataSource == 'ibd') {
-              $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'IBD', 'Arrange', '', $caseID);
-
+            // migrate CPMS accrual activity (rare data migration) + for IBD volunteers
+            if (isset($data['cpms_accrual_date']) && $data['cpms_accrual_date'] <> '') {
+              if ($this->_dataSource == 'rare_migration') {
+                $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'Rares', 'Completed', '', $caseID);
+              } elseif ($this->_dataSource == 'ibd') {
+                $this->addRecruitmentCaseActivity($contactId, 'nihr_cpms_accrual', $data['cpms_accrual_date'], 'IBD', 'Arrange', '', $caseID);
+              }
             }
           }
 
@@ -684,7 +686,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     $data['contact_type'] = 'Individual';
     $data['contact_sub_type'] = 'nihr_volunteer';
 
-    if ($this->_dataSource == 'pibd' && isset($data['cih_type_guardian_id']) && $data['cih_type_guardian_id'] <> '')  {
+    if (($this->_dataSource == 'pibd' && isset($data['cih_type_guardian_id']) &&
+          $data['cih_type_guardian_id'] <> '') ||
+        ($this->_dataSource == 'cyp' && isset($data['cih_type_bioresource_id']) &&
+      $data['cih_type_bioresource_id'] <> '' )) {
       $data['contact_sub_type'] = 'nbr_guardian';
     }
 
@@ -738,9 +743,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         break;
       case "cns":
-        if ($data['cih_type_covid-cns_id'] <> '') {
-          $identifier_type = 'cih_type_covid-cns_id';
-          $identifier = $data['cih_type_covid-cns_id'];
+        if ($data['cih_type_covid_cns_id'] <> '') {
+          $identifier_type = 'cih_type_covid_cns_id';
+          $identifier = $data['cih_type_covid_cns_id'];
         }
         break;
       case "ibd":
@@ -844,7 +849,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $contactId = $volunteer->findVolunteer($data, $this->_logger);
         }
       } else {
-        // not used at the moment - left that code as it might be used for YP
+        // not used at the moment - left that code as it might be used for CYP
         $contactId = $this->findGuardian($data, $this->_logger);
       }
 
@@ -2191,30 +2196,27 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     $id = '';
 
     // Guardians records do not use identifiers other than BioResource ID, and they don't contain gender or DOB
-    // To avoid creating duplicates, test on name and postcode and (email or phone)
+    // To avoid creating duplicates, test on name and (email or phone)
+    // check on subtype guardian only - even if the person is registered as a volunteer, create a new record
 
     if (isset($data['first_name']) && $data['first_name'] <> '' &&
-      isset($data['last_name']) && $data['last_name'] <> '' &&
-      isset($data['postcode']) && $data['postcode'] <> '') {
+      isset($data['last_name']) && $data['last_name'] <> '') {
 
       if (isset($data['phone']) && $data['phone'] <> '') {
         $sql = "
           select count(*) as cnt, c.id as id
-          from civicrm_contact c, civicrm_address a, civicrm_phone p
+          from civicrm_contact c, civicrm_phone p
           where c.contact_type = 'Individual'
-          -- and c.contact_sub_type = 'nbr_guardian'
+          and c.contact_sub_type = 'nbr_guardian'
           and c.first_name = %1
           and c.last_name = %2
-          and c.id = a.contact_id
-          and a.postal_code = %3
           and c.id = p.contact_id
-          and p.phone = %4";
+          and p.phone = %3";
 
         $queryParams = [
           1 => [$data['first_name'], 'String'],
           2 => [$data['last_name'], 'String'],
-          3 => [$data['postcode'], 'String'],
-          4 => [$data['phone'], 'String']
+          3 => [$data['phone'], 'String']
         ];
 
         try {
@@ -2238,21 +2240,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($id == '' and isset($data['email']) && $data['email'] <> '') {
         $sql = "
           select count(*) as cnt, c.id as id
-          from civicrm_contact c, civicrm_address a, civicrm_email e
+          from civicrm_contact c, civicrm_email e
           where c.contact_type = 'Individual'
-          -- and c.contact_sub_type = 'nbr_guardian'
+          and c.contact_sub_type = 'nbr_guardian'
           and c.first_name = %1
           and c.last_name = %2
-          and c.id = a.contact_id
-          and a.postal_code = %3
           and c.id = e.contact_id
-          and e.email = %4";
+          and e.email = %3";
 
         $queryParams = [
           1 => [$data['first_name'], 'String'],
           2 => [$data['last_name'], 'String'],
-          3 => [$data['postcode'], 'String'],
-          4 => [$data['email'], 'String']
+          3 => [$data['email'], 'String']
         ];
 
         try {

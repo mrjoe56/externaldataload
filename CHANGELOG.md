@@ -1,3 +1,7 @@
+## Version 1.36
+* renamed cih_type_covid-cns_id to cih_type_covid_cns_id
+* updated findGuardian - to be used for CYP
+
 ## Version 1.35
 * updates to support PIBD data load (folder name change, Inception panel)
 

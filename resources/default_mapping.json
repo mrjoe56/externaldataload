@@ -137,7 +137,7 @@
   "cih_type_cdb_id": "cih_type_cdb_id",
   "cih_type_compare_id": "cih_type_compare_id",
   "cih_type_covid_id": "cih_type_covid_id",
-  "cih_type_covid-cns_id": "cih_type_covid-cns_id",
+  "cih_type_covid_cns_id": "cih_type_covid_cns_id",
   "cih_type_duplicate_deleted": "cih_type_duplicate_deleted",
   "cih_type_duplicate_invalid": "cih_type_duplicate_invalid",
   "cih_type_duplicate_live_entry": "cih_type_duplicate_live_entry",

@@ -22,8 +22,10 @@ function civicrm_api3_nihr_import_csv_Loaddemographics($params) {
     // 2) contact data
     processFile($loadFolder, $params['dataSource'] . '_contacts_export*', $params);
 
-    if ($params['dataSource'] == 'pibd') {
+    #if ($params['dataSource'] == 'pibd') {
+    if (in_array($params['dataSource'], ['pibd', 'cyp'])) {
       // in addition to the volunteer data files (aka children's data) load the guardian data as well
+      // NOTE: for CYP the guardian data is collected before the child's data
       processFile($loadFolder, $params['dataSource'] . '_guardian_pid_data_export*', $params);
       processFile($loadFolder, $params['dataSource'] . '_guardian_contacts_export*', $params);
     }
