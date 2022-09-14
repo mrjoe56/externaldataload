@@ -55,6 +55,9 @@ class CRM_Externaldataload_LoadConsent
           // consent not yet on Civi - add
           // *** check if 'consented by' has got a 'BioResourcer' record; if not, add name to details
           $details = '';
+          if (isset($data['consent_details'])) {
+            $details = $data['consent_details'];
+          }
           $consentedBy = '';
 
           $names = explode(' ', $data['consented_by']);
@@ -64,7 +67,10 @@ class CRM_Externaldataload_LoadConsent
               $consentedBy = $consentedById;
             }
             else {
-              $details = 'consented by ' . $data['consented_by'];
+              if ($details != '') {
+                $details = $details . '; ';
+              }
+              $details = $details . 'consented by ' . $data['consented_by'];
             }
           }
 

@@ -35,6 +35,7 @@
   "consent_form_status": "consent_status",
   "consented_by": "consented_by",
   "consent_type": "consent_type",
+  "consent_details": "consent_details",
   "information_leaflet_version": "information_leaflet_version",
   "genetic_feedback": "genetic_feedback",
   "pertinent_genetic_feedback": "pertinent_genetic_feedback",

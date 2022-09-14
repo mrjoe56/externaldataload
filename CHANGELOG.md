@@ -1,3 +1,6 @@
+## Version 1.37
+* added new field 'consent_details'
+
 ## Version 1.36
 * renamed cih_type_covid-cns_id to cih_type_covid_cns_id
 * updated findGuardian - to be used for CYP
