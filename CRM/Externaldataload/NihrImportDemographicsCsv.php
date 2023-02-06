@@ -118,7 +118,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (($this->_dataSource == 'ucl' && !isset($this->_mapping['cih_type_ucl_local'])) ||
       ($this->_dataSource == 'gstt' && !isset($this->_mapping['cih_type_gstt'])) ||
       ($this->_dataSource == 'ncl' && !isset($this->_mapping['cih_type_newcastle']) &&
-        !isset($this->_mapping['cih_type_packid'])) ||
+        !isset($this->_mapping['cih_type_packid']) && !isset($this->_mapping['cih_type_newcastle_local']) )||
       ($this->_dataSource == 'ibd' && !isset($this->_mapping['pat_bio_no'])) ||
       ($this->_dataSource == 'strides' && !isset($this->_mapping['cih_type_strides_pid']) &&
         !isset($this->_mapping['cih_type_pack_id_din'])) ||
@@ -307,12 +307,17 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $this->addDisease($contactId, $data['family_member'], $data['disease'], $data['diagnosis_year'], $data['diagnosis_age'], $data['disease_notes'], $data['taking_medication']);
 
           // *** Medication data ***
-          // no means to upload medication names so far, but drug families and starfish medication data (free text)
           if ((isset($data['medication_starfish_data']) && !empty($data['medication_starfish_data'])) ||
-            (isset($data['medication_drug_family']) && !empty($data['medication_drug_family']))) {
-            $this->addMedication($contactId, $data['medication_starfish_data'], $data['medication_drug_family']);
+            (isset($data['medication_drug_family']) && !empty($data['medication_drug_family'])) ||
+            (isset($data['medication_name']) && !empty($data['medication_name']))) {
+            $this->addMedication($contactId, $data['medication_starfish_data'], $data['medication_drug_family'],
+              $data['medication_name'], $data['medication_date']);
           }
 
+          // *** Participation in studies ***
+          if (isset($data['other_study']) && !empty($data['other_study'])) {
+            $this->addOtherStudy($contactId, $data['other_study'], $data['other_study_type']);
+          }
 
           // *** add source specific identifiers and data *********************************************************
           switch ($this->_dataSource) {
@@ -347,10 +352,21 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             case "ncl":
               $this->addAlias($contactId, 'cih_type_newcastle', $data['cih_type_newcastle'], 2);
               $this->addAlias($contactId, 'cih_type_newcastle_local', $data['cih_type_newcastle_local'], 2);
-
               break;
 
-          }
+            case "cyp":
+              // create guardian_ids for *guardian* records only
+              // ID depends on BioResource ID, number depends on number of children
+              if ($data['cih_type_bioresource_id'] = 'x') {
+                //for (number of children)
+                // newID = 'G_' . $data['bioresourceID'] . '_' . $number;
+                ///$this->addAlias($contactId, 'cih_type_guardian_id', $newID);
+                /// ;
+                ;
+              }
+              break;
+
+            }
 
           // *** all recruitment information is stored in one recruitment case *************************
           // *** regardless if volunteer is new (might be missing in existing record) - check if recruitment
@@ -527,6 +543,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($newKey == 'proband') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_proband', 'id');
       }
+      if ($newKey == 'family_history') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_family_history', 'id');
+      }
 
       // *** custom group 'Lifestyle'
       if ($newKey == 'alcohol') {
@@ -596,7 +615,28 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_gender_at_birth', 'id');
       }
 
+      // *** custom group 'Quality of live'
+      if ($newKey == 'live_quality_overall') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_overall', 'id');
+      }
+      if ($newKey == 'live_quality_happiness') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_happiness', 'id');
+      }
+      if ($newKey == 'live_quality_energy') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_energy', 'id');
+      }
+      if ($newKey == 'live_quality_opportunity') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_opportunity', 'id');
+      }
+      if ($newKey == 'live_quality_money') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_money', 'id');
+      }
+      if ($newKey == 'employment_status') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_employment_status', 'id');
+      }
 
+
+      //
       if ($newKey == 'non_recallable_reason') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerStatusCustomField('nvs_nonrecallable_reason', 'id');
       }
@@ -688,8 +728,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     if (($this->_dataSource == 'pibd' && isset($data['cih_type_guardian_id']) &&
           $data['cih_type_guardian_id'] <> '') ||
-        ($this->_dataSource == 'cyp' && isset($data['cih_type_bioresource_id']) &&
-      $data['cih_type_bioresource_id'] <> '' )) {
+      // &&&& this is not always correct (update happens with guardian ID) and needs to be changed
+        ($this->_dataSource == 'cyp' && $data['cih_type_guardian_id'] == '' )) {
       $data['contact_sub_type'] = 'nbr_guardian';
     }
 
@@ -738,6 +778,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         } elseif ($data['cih_type_newcastle'] <> '') {
           $identifier_type = 'cih_type_newcastle';
           $identifier = $data['cih_type_newcastle'];
+        } elseif ($data['cih_type_newcastle_local'] <> '') {
+          $identifier_type = 'cih_type_newcastle_local';
+          $identifier = $data['cih_type_newcastle_local'];
         } else {
           $this->_logger->logMessage('Neither National ID nor Pack ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
@@ -831,6 +874,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $identifier = $data['cih_type_rare_migration_id'];
         } else {
           $this->_logger->logMessage('No Rare Migration ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
+        }
+        break;
+      case "cyp":
+        if ($data['cih_type_guardian_id'] <> '') {
+          $identifier_type = 'cih_type_guardian_id';
+          $identifier = $data['cih_type_guardian_id'];
+          // && don't know here if child or guardian - need to find way to set the subtype correctly
+          // && prob different field in import file
+        } elseif ($data['first_name'] <> '' and $data['last_name'] <> '' and $data['email'] <> '') {
+          // &&&&&&&&&&&&&
+          $data['contact_sub_type'] = 'nbr_guardian';
+          $this->_dataSource = 'guardian';
+        } else {
+          $this->_logger->logMessage('No key information provided (guardian ID or name/email, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
       default:
@@ -1405,34 +1462,50 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
   }
 
-  private function addMedication($contactID, $starfishData, $drugFamily)
+  private function addMedication($contactID, $starfishData, $drugFamily, $medicationName, $medicationDate)
   {
     // --- check if medication already exists ---------------------------------------------------------------------
     $query = "SELECT count(*)
                   from civicrm_value_nihr_volunteer_medication
                   where entity_id = %1
                   and nvm_starfish_data = %2
-                  and nvm_medication_drug_family = %3";
+                  and nvm_medication_drug_family = %3
+                  and nvm_medication_name = %4";
     $queryParams = [
       1 => [$contactID, "Integer"],
       2 => [$starfishData, "String"],
       3 => [$drugFamily, "String"],
+      4 => [$medicationName, "String"],
     ];
     $cnt = CRM_Core_DAO::singleValueQuery($query, $queryParams);
 
     if ($cnt == 0) {
       // --- insert --------------------------------------------------------------------------------------------
-      $query = "insert into civicrm_value_nihr_volunteer_medication (entity_id, nvm_starfish_data, nvm_medication_drug_family)
-            values (%1,%2,%3)";
+      $query = "insert into civicrm_value_nihr_volunteer_medication (entity_id, nvm_starfish_data, nvm_medication_drug_family,
+                    nvm_medication_name, nvm_medication_date)
+            values (%1,%2,%3,%4,%5)";
 
       $queryParams = [
         1 => [$contactID, "Integer"],
         2 => [$starfishData, "String"],
-        3 => [$drugFamily, "String"]
+        3 => [$drugFamily, "String"],
+        4 => [$medicationName, "String"],
+        5 => [$medicationDate, "Date"]
       ];
       CRM_Core_DAO::executeQuery($query, $queryParams);
     }
   }
+
+  private function addOtherStudy($contactID, $otherStudy, $otherStudyType)
+  {
+    // --- &&& TODO
+    // table: civicrm_value_nihr_participation_in_studies
+    // field1: nvpis_other_study - nbr_option_yes, nbr_option_no
+    // field2: nvpis_other_study_type - nbr_type_of_study_questionnaire, nbr_type_of_study_pysical_exercise etc
+    //     multiple possible
+    ;
+  }
+
 
   /**
    * Method to get the id of the panel
@@ -1684,7 +1757,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     // only enter if not already on the volunteer record
     $params = [
       "activity_type_id" => $activityType,
-      "target_id" => $contactId,
+      "target_contact_id" => $contactId,
     ];
     if (isset($dateTime) && $dateTime <> '') {
       $params['activity_date_time'] = $dateTime;
@@ -1778,7 +1851,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     $params = [
       "activity_type_id" => $activityType,
-      "target_id" => $contactId,
+      "target_contact_id" => $contactId,
       "case_id" => $caseId,
     ];
     if (isset($dateTime) && $dateTime <> '') {
