@@ -314,10 +314,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               $data['medication_name'], $data['medication_date']);
           }
 
-          // *** Participation in studies ***
-          if (isset($data['other_study']) && !empty($data['other_study'])) {
-            $this->addOtherStudy($contactId, $data['other_study'], $data['other_study_type']);
-          }
 
           // *** add source specific identifiers and data *********************************************************
           switch ($this->_dataSource) {
@@ -635,6 +631,16 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_employment_status', 'id');
       }
 
+      // *** participation in other study ***
+      if ($newKey == 'other_study') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getParticipationInStudiesCustomField('nvpis_other_study', 'id');
+      }
+      if ($newKey == 'other_study_type') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getParticipationInStudiesCustomField('nvpis_other_study_type', 'id');
+        // multiple types possible
+        $x = explode('-', $value);
+        $value = CRM_Core_DAO::VALUE_SEPARATOR . implode(CRM_Core_DAO::VALUE_SEPARATOR, $x);
+      }
 
       //
       if ($newKey == 'non_recallable_reason') {
@@ -1494,16 +1500,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ];
       CRM_Core_DAO::executeQuery($query, $queryParams);
     }
-  }
-
-  private function addOtherStudy($contactID, $otherStudy, $otherStudyType)
-  {
-    // --- &&& TODO
-    // table: civicrm_value_nihr_participation_in_studies
-    // field1: nvpis_other_study - nbr_option_yes, nbr_option_no
-    // field2: nvpis_other_study_type - nbr_type_of_study_questionnaire, nbr_type_of_study_pysical_exercise etc
-    //     multiple possible
-    ;
   }
 
 
