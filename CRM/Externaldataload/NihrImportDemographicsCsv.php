@@ -335,6 +335,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               }
               break;
 
+            case "cyp":
+              if ($data['cih_type_dcyphr_id'] <> '') {
+                $this->addAlias($contactId, 'cih_type_dcyphr_id', $data['cih_type_dcyphr_id'], 2);
+              }
+              if ($data['cih_type_guardian_id'] <> '') {
+                $this->addAlias($contactId, 'cih_type_guardian_id', $data['cih_type_guardian_id'], 2);
+              }
+
+              if (isset($data['guardian_of']) and $data['guardian_of'] <> '') {
+                // create link to guardian record
+                $this->addRelationship($contactId, $data['guardian_of'], 'nbr_guardian_of');
+              }
+              break;
+
             case "ucl":
               $this->addAlias($contactId, 'cih_type_ucl_local', $data['cih_type_ucl_local'], 0);
               $this->addAlias($contactId, 'cih_type_ucl', $data['cih_type_ucl'], 0);
@@ -349,19 +363,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               $this->addAlias($contactId, 'cih_type_newcastle', $data['cih_type_newcastle'], 2);
               $this->addAlias($contactId, 'cih_type_newcastle_local', $data['cih_type_newcastle_local'], 2);
               break;
-
-            case "cyp":
-              // create guardian_ids for *guardian* records only
-              // ID depends on BioResource ID, number depends on number of children
-              if ($data['cih_type_bioresource_id'] = 'x') {
-                //for (number of children)
-                // newID = 'G_' . $data['bioresourceID'] . '_' . $number;
-                ///$this->addAlias($contactId, 'cih_type_guardian_id', $newID);
-                /// ;
-                ;
-              }
-              break;
-
             }
 
           // *** all recruitment information is stored in one recruitment case *************************
@@ -542,6 +543,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($newKey == 'family_history') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_family_history', 'id');
       }
+      // CYP only
+      /* if ($newKey == 'school') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_school', 'id');
+      } */
+
 
       // *** custom group 'Lifestyle'
       if ($newKey == 'alcohol') {
@@ -732,10 +738,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     $data['contact_type'] = 'Individual';
     $data['contact_sub_type'] = 'nihr_volunteer';
 
-    if (($this->_dataSource == 'pibd' && isset($data['cih_type_guardian_id']) &&
-          $data['cih_type_guardian_id'] <> '') ||
-      // &&&& this is not always correct (update happens with guardian ID) and needs to be changed
-        ($this->_dataSource == 'cyp' && $data['cih_type_guardian_id'] == '' )) {
+    if (($this->_dataSource == 'pibd' || $this->_dataSource == 'cyp') &&
+        isset($data['cih_type_guardian_id']) &&
+          $data['cih_type_guardian_id'] <> '') {
       $data['contact_sub_type'] = 'nbr_guardian';
     }
 
@@ -883,19 +888,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         }
         break;
       case "cyp":
-        if ($data['cih_type_guardian_id'] <> '') {
-          $identifier_type = 'cih_type_guardian_id';
+        if ($data['cih_type_dcyphr_id'] <> '') {
+          $identifier_type = 'cih_type_dcyphr_id';
+          $identifier = $data['cih_type_dcyphr_id'];
+        }
+        elseif (!empty($data['cih_type_guardian_id'])) {
           $identifier = $data['cih_type_guardian_id'];
-          // && don't know here if child or guardian - need to find way to set the subtype correctly
-          // && prob different field in import file
-        } elseif ($data['first_name'] <> '' and $data['last_name'] <> '' and $data['email'] <> '') {
-          // &&&&&&&&&&&&&
-          $data['contact_sub_type'] = 'nbr_guardian';
-          $this->_dataSource = 'guardian';
+          $identifier_type = 'cih_type_guardian_id';
         } else {
-          $this->_logger->logMessage('No key information provided (guardian ID or name/email, no data loaded: ' . $data['last_name'], 'ERROR');
+          $this->_logger->logMessage('No guardian ID/CYP ID provided, no data loaded: ' . $data['last_name'], 'ERROR');
         }
         break;
+
       default:
         $this->_logger->logMessage('no default mapping for ' . $this->_dataSource, 'ERROR');
     }
@@ -912,7 +916,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $contactId = $volunteer->findVolunteer($data, $this->_logger);
         }
       } else {
-        // not used at the moment - left that code as it might be used for CYP
+        // CYP (currently not used)
         $contactId = $this->findGuardian($data, $this->_logger);
       }
 
@@ -2266,48 +2270,12 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     $id = '';
 
     // Guardians records do not use identifiers other than BioResource ID, and they don't contain gender or DOB
-    // To avoid creating duplicates, test on name and (email or phone)
+    // To avoid creating duplicates, test on name and email
     // check on subtype guardian only - even if the person is registered as a volunteer, create a new record
 
     if (isset($data['first_name']) && $data['first_name'] <> '' &&
-      isset($data['last_name']) && $data['last_name'] <> '') {
-
-      if (isset($data['phone']) && $data['phone'] <> '') {
-        $sql = "
-          select count(*) as cnt, c.id as id
-          from civicrm_contact c, civicrm_phone p
-          where c.contact_type = 'Individual'
-          and c.contact_sub_type = 'nbr_guardian'
-          and c.first_name = %1
-          and c.last_name = %2
-          and c.id = p.contact_id
-          and p.phone = %3";
-
-        $queryParams = [
-          1 => [$data['first_name'], 'String'],
-          2 => [$data['last_name'], 'String'],
-          3 => [$data['phone'], 'String']
-        ];
-
-        try {
-          $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
-          if ($xdata->fetch()) {
-            $count = $xdata->cnt;
-            $id = $xdata->id;
-          }
-        } catch (Exception $ex) {
-          $logger->logMessage('Select FindGuardian (phone number) failed ' . $data['first_name'] . ' ' . $data['first_name']);
-        }
-
-        // cnt = 1 -> ID unique for this volunteer
-        if ($count == 0) {
-          $id = ''; // just in case
-        } elseif ($count > 1) {
-          // there are already duplicated records of the volunteer - use one of these but give warning
-          $logger->logMessage('Multiple records linked to identifier ' . $data['first_name'] . ' ' . $data['last_name'] . ', used first one (' . $id . ')');
-        }
-      }
-      if ($id == '' and isset($data['email']) && $data['email'] <> '') {
+      isset($data['last_name']) && $data['last_name'] <> '' &&
+      isset($data['email']) && $data['email'] <> '') {
         $sql = "
           select count(*) as cnt, c.id as id
           from civicrm_contact c, civicrm_email e
@@ -2341,7 +2309,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           // there are already duplicated records of the volunteer - use one of these but give warning
           $logger->logMessage('Multiple records linked to identifier ' . $data['first_name'] . ' ' . $data['last_name'] . ', used first one (' . $id . ')');
         }
-      }
     }
     return $id;
   }

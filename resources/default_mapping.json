@@ -41,6 +41,9 @@
   "pertinent_genetic_feedback": "pertinent_genetic_feedback",
   "opted_out_of_gel_main": "opted_out_of_gel_main",
   "assent_form_completed": "assent_form_completed",
+  "assent_version": "assent_version",
+  "assent_pis_version": "assent_pis_version",
+  "opt_in_to_gel_ngrl": "opt_in_to_gel_ngrl",
 
   "invite_type": "invite_type",
   "ethnicity": "ethnicity",
@@ -194,6 +197,7 @@
   "cih_type_gel_id": "cih_type_gel_id",
 
   "cih_type_guardian_id": "cih_type_guardian_id",
+  "cih_type_dcyphr_id": "cih_type_dcyphr_id",
 
   "contact_category": "contact_category",
   "contact_location": "contact_location",
@@ -231,6 +235,7 @@
   "live_quality_energy": "live_quality_energy",
   "live_quality_opportunity": "live_quality_opportunity",
   "live_quality_money": "live_quality_money",
-  "employment_status": "employment_status"
+  "employment_status": "employment_status",
 
+  "school": "school"
 }
