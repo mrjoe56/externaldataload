@@ -41,12 +41,14 @@
   "pertinent_genetic_feedback": "pertinent_genetic_feedback",
   "opted_out_of_gel_main": "opted_out_of_gel_main",
   "assent_form_completed": "assent_form_completed",
+  "assent_version": "assent_version",
+  "assent_pis_version": "assent_pis_version",
+  "opt_in_to_gel_ngrl": "opt_in_to_gel_ngrl",
 
   "invite_type": "invite_type",
   "ethnicity": "ethnicity",
   "cohort": "cohort",
   "diagnosis": "diagnosis",
-  "other_diagnosis": "other_diagnosis",
   "centre": "centre",
   "panel": "panel",
   "site": "site",
@@ -58,6 +60,7 @@
   "abo_group": "abo_group",
   "rhesus_factor": "rhesus_factor",
   "proband": "proband",
+  "family_history": "family_history",
   "notes": "notes",
   "notes_date": "notes_date",
 
@@ -68,8 +71,10 @@
   "disease_taking_medication": "taking_medication",
   "disease_notes": "disease_notes",
 
+  "medication_name": "medication_name",
   "medication_starfish_data": "medication_starfish_data",
   "medication_drug_family": "medication_drug_family",
+  "medication_date": "medication_date",
 
   "alcohol": "alcohol",
   "alcohol_amount": "alcohol_amount",
@@ -192,6 +197,7 @@
   "cih_type_gel_id": "cih_type_gel_id",
 
   "cih_type_guardian_id": "cih_type_guardian_id",
+  "cih_type_dcyphr_id": "cih_type_dcyphr_id",
 
   "contact_category": "contact_category",
   "contact_location": "contact_location",
@@ -212,10 +218,24 @@
   "activity_location": "activity_location",
   "activity_datetime": "activity_datetime",
   "activity_status": "activity_status",
+  "activity_assignee": "activity_assignee",
 
   "rec_activity": "rec_activity",
   "rec_activity_subject": "rec_activity_subject",
   "rec_activity_location": "rec_activity_location",
   "rec_activity_datetime": "rec_activity_datetime",
-  "rec_activity_status": "rec_activity_status"
+  "rec_activity_status": "rec_activity_status",
+  "rec_activity_assignee": "rec_activity_assignee",
+
+  "other_study_participation": "other_study",
+  "other_study_type": "other_study_type",
+
+  "live_quality_overall": "live_quality_overall",
+  "live_quality_happiness": "live_quality_happiness",
+  "live_quality_energy": "live_quality_energy",
+  "live_quality_opportunity": "live_quality_opportunity",
+  "live_quality_money": "live_quality_money",
+  "employment_status": "employment_status",
+
+  "school": "school"
 }

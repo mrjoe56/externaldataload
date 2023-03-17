@@ -1,3 +1,8 @@
+## Version 1.38
+* added new consent field 'opt in to Gel NGRL'
+* added HLQ data fields
+* added CYP data load (guardian and volunteer data as PIBD)
+
 ## Version 1.37
 * added new field 'consent_details'
 
