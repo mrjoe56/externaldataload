@@ -386,6 +386,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               $nbrConsent->addConsent($contactId, $caseID, $consent_status, $subject, $data, $this->_logger);
             }
 
+            // assent (CYP only)
+            if (isset($data['assent_version']) && $data['assent_version'] <> '') {
+              $nbrAssent = new CRM_Externaldataload_LoadAssent();
+              //$subject = "Assent " . $data['panel'] . " $project_identifier";
+              $subject = "Assent";
+              $nbrAssent->addAssent($contactId, $caseID, $subject, $data, $this->_logger);
+            }
+
             // migrate paper questionnaire flag (IBD)
             if (isset($data['nihr_paper_hlq']) && $data['nihr_paper_hlq'] == 'Yes') {
               $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', 'Completed', '', $caseID);
