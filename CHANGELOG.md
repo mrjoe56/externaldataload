@@ -1,3 +1,5 @@
+## Version 1.39
+* upload consent data for slam volunteers with status 'consent outdated'
 ## Version 1.38
 * added new consent field 'opt in to Gel NGRL'
 * added HLQ data fields
