@@ -46,10 +46,19 @@ class CRM_Externaldataload_LoadConsent
           $consentStatusField = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consent_status', 'id');
           $consentedByField = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consented_by', 'id');
           $geneticFeedback = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_genetic_feedback', 'id');
+          $pertinentGeneticFeedback = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_pertinent_genetic_feedback', 'id');
+          $optedOutOfGelMain = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_opted_out_of_gel_main', 'id');
           $inviteType = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_invite_type', 'id');
+          $consentType = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consent_type', 'id');
+          $assentFormCompleted = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_assent_form_completed', 'id');
+          $optInToGelNgrl = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_opt_in_to_gel_ngrl', 'id');
+
           // consent not yet on Civi - add
           // *** check if 'consented by' has got a 'BioResourcer' record; if not, add name to details
           $details = '';
+          if (isset($data['consent_details'])) {
+            $details = $data['consent_details'];
+          }
           $consentedBy = '';
 
           $names = explode(' ', $data['consented_by']);
@@ -59,12 +68,19 @@ class CRM_Externaldataload_LoadConsent
               $consentedBy = $consentedById;
             }
             else {
-              $details = 'consented by ' . $data['consented_by'];
+              if ($details != '') {
+                $details = $details . '; ';
+              }
+              $details = $details . 'consented by ' . $data['consented_by'];
             }
           }
 
           // **** --- add consent to case
           $consentDate = new DateTime($data['consent_date']);
+          $opted_out_of_gel_main = '';
+          if (isset($data['opted_out_of_gel_main']) && !empty($data['opted_out_of_gel_main'])) {
+            $opted_out_of_gel_main = CRM_Core_DAO::VALUE_SEPARATOR.$data['opted_out_of_gel_main'].CRM_Core_DAO::VALUE_SEPARATOR;
+          }
           try {
             $result2 = civicrm_api3('Activity', 'create', [
               'source_contact_id' => "user_contact_id",
@@ -79,8 +95,13 @@ class CRM_Externaldataload_LoadConsent
               $consentedByField => $consentedBy,
               'details' => $details,
               $geneticFeedback => $data['genetic_feedback'],
+              $pertinentGeneticFeedback => $data['pertinent_genetic_feedback'],
+              $optedOutOfGelMain => $opted_out_of_gel_main,
               $inviteType => $data['invite_type'],
               'subject' => $subject,
+              $consentType => $data['consent_type'],
+              $assentFormCompleted => $data['assent_form_completed'],
+              $optInToGelNgrl => $data['opt_in_to_gel_ngrl'],
             ]);
           } catch (CiviCRM_API3_Exception $ex) {
             $logger->logMessage('Error message when adding volunteer consent ' . $contactId . ' ' . $ex->getMessage(), 'error');
