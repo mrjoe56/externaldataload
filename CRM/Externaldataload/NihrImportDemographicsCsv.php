@@ -1296,7 +1296,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
     // get latest recruitment case for contact, if not provided
     if (is_null($caseId)) {
-      $caseId = CRM_Nihrbackbone_NbrVolunteerCase::getActiveRecruitmentCaseId($contactId);
+      $caseId = CRM_Nihrbackbone_NbrRecruitmentCase::getActiveRecruitmentCaseId($contactId);
     }
 
     // only enter if not already on the case
