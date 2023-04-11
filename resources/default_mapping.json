@@ -231,11 +231,11 @@
   "other_study_participation": "other_study",
   "other_study_type": "other_study_type",
 
-  "live_quality_overall": "live_quality_overall",
-  "live_quality_happiness": "live_quality_happiness",
-  "live_quality_energy": "live_quality_energy",
-  "live_quality_opportunity": "live_quality_opportunity",
-  "live_quality_money": "live_quality_money",
+  "life_quality_overall": "life_quality_overall",
+  "life_quality_happiness": "life_quality_happiness",
+  "life_quality_energy": "life_quality_energy",
+  "life_quality_opportunity": "life_quality_opportunity",
+  "life_quality_money": "life_quality_money",
   "employment_status": "employment_status",
 
   "school": "school"
