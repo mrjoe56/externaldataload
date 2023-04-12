@@ -1,3 +1,6 @@
+## Version 1.40
+* EH: added disable/enableFullGroupMode around query, perhaps linked to error reported by Carola
+
 ## Version 1.39
 * upload consent data for slam volunteers with status 'consent outdated'
 ## Version 1.38
