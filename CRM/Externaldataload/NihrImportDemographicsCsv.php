@@ -627,20 +627,20 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_gender_at_birth', 'id');
       }
 
-      // *** custom group 'Quality of live'
-      if ($newKey == 'live_quality_overall') {
+      // *** custom group 'Quality of life'
+      if ($newKey == 'life_quality_overall') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_overall', 'id');
       }
-      if ($newKey == 'live_quality_happiness') {
+      if ($newKey == 'life_quality_happiness') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_happiness', 'id');
       }
-      if ($newKey == 'live_quality_energy') {
+      if ($newKey == 'life_quality_energy') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_energy', 'id');
       }
-      if ($newKey == 'live_quality_opportunity') {
+      if ($newKey == 'life_quality_opportunity') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_opportunity', 'id');
       }
-      if ($newKey == 'live_quality_money') {
+      if ($newKey == 'life_quality_money') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerLifeQualityCustomField('nvlq_money', 'id');
       }
       if ($newKey == 'employment_status') {
@@ -997,7 +997,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
 
       foreach ($data as $key => $value) {
-        if (!empty($value)) {
+        if (!empty($value) || $value == 0) {
           $params[$key] = $value;
         }
       }
