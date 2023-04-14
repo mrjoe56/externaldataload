@@ -28,21 +28,34 @@ class CRM_Externaldataload_LoadAssent
     } else {
       $existingAssentVersion = $this->isExistingAssentVersion($data['assent_version']);
       $existingAssentPisVersion = $this->isExistingAssentPisVersion($data['assent_pis_version']);
+      Civi::log()->info('Existing assent PIS version is '.$existingAssentPisVersion );
+
+      Civi::log()->info('Existing assent version is '.$existingAssentVersion );
+
       if (!$existingAssentPisVersion && isset($data['assent_pis_version']) && $data['assent_pis_version'] <> '') {
+        Civi::log()->info('No assent pis version'  );
+
         $logger->logMessage( $contactId . ' assent pis version '
           . $data['assent_pis_version'] . ' does not exist.' ,'warning');
         $data['assent_pis_version'] = '';
       }
       if (!$existingAssentVersion) {
+        Civi::log()->info('No assent version'  );
+
         $logger->logMessage('Could not add assent for contact ID ' . $contactId . ' because assent version '
           . $data['assent_version'] . ' does not exist.' ,'error');
       }
       else {
         $assentDate = date('Y-m-d', strtotime($data['assent_date']));
         if ($this->countExistingAssent($contactId, $assentDate, $data['assent_pis_version'], $data['assent_version']) == 0) {
+          Civi::log()->info('count existing assent was 0');
           $assentVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getNbrAssentDataCustomField('nbr_assent_version', 'id');
           $assentPisVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getNbrAssentDataCustomField('nbr_assent_pis_version', 'id');
           $assentStatus = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getNbrAssentDataCustomField('nbr_assent_status', 'id');
+
+          Civi::log()->info('Assent version custom field is '.$assentVersion  );
+          Civi::log()->info('Assent Pis version custom field is '.$assentPisVersion  );
+          Civi::log()->info('Assent status custom field is '.$assentStatus  );
 
           // assent not yet on Civi - add assent to case
           $assentDate = new DateTime($data['assent_date']);
@@ -60,6 +73,7 @@ class CRM_Externaldataload_LoadAssent
               'subject' => $subject,
             ]);
           } catch (CiviCRM_API3_Exception $ex) {
+            Civi::log()->info('AError when adding volunteer assen for '.$contactId. " msg ".$ex->getMessage()  );
             $logger->logMessage('Error message when adding volunteer assent ' . $contactId . ' ' . $ex->getMessage(), 'error');
           }
         }
@@ -75,6 +89,8 @@ class CRM_Externaldataload_LoadAssent
    */
   public function isExistingAssentPisVersion($assentPisVersion) {
     $query = "SELECT COUNT(*) FROM civicrm_option_value WHERE option_group_id = %1 AND value = %2";
+    Civi::log()->info('pis version is '. Civi::service('nbrBackbone')->getAssentPisVersionOptionGroupId() .' param is '.$assentPisVersion);
+
     $queryParams = [
       1 => [Civi::service('nbrBackbone')->getAssentPisVersionOptionGroupId(), "Integer"],
       2 => [$assentPisVersion, "String"],
@@ -94,6 +110,7 @@ class CRM_Externaldataload_LoadAssent
    */
   public function isExistingAssentVersion($assentVersion) {
     $query = "SELECT COUNT(*) FROM civicrm_option_value WHERE option_group_id = %1 AND value = %2";
+    Civi::log()->info('// version is '. Civi::service('nbrBackbone')->getAssentVersionOptionGroupId() .' param is '.$assentVersion);
     $queryParams = [
       1 => [Civi::service('nbrBackbone')->getAssentVersionOptionGroupId(), "Integer"],
       2 => [$assentVersion, "String"],
@@ -118,6 +135,15 @@ class CRM_Externaldataload_LoadAssent
     $tableName = Civi::service('nbrBackbone')->getAssentTableName();
     $assentVersionColumn = Civi::service('nbrBackbone')->getAssentVersionColumnName();
     $assentPisVersionColumn = Civi::service('nbrBackbone')->getAssentPisVersionColumnName();
+
+
+    Civi::log()->info('Params: '.$contactId. "//date:".$assentDate ."// ".$assentPisVersion."//".$assentVersion);
+
+    Civi::log()->info('Assent table name'.$tableName. 'column'.$assentVersionColumn. ' pis version column'.$assentPisVersionColumn  );
+
+    Civi::log()->info('Target record type id is '. Civi::service('nbrBackbone')->getTargetRecordTypeId());
+    Civi::log()->info('Assent type id is '. Civi::service('nbrBackbone')->getAssentActivityTypeId());
+
     $countQuery = "SELECT COUNT(*)
             FROM civicrm_activity AS a
                 JOIN civicrm_activity_contact AS b ON a.id = b.activity_id AND b.record_type_id = %1
@@ -135,6 +161,8 @@ class CRM_Externaldataload_LoadAssent
       7 => [$assentPisVersion, "String"],
       8 => [$assentVersion, "String"],
     ];
+
+    Civi::log()->info('Running count existing assent query');
     return CRM_Core_DAO::singleValueQuery($countQuery, $countParams);
   }
 }
