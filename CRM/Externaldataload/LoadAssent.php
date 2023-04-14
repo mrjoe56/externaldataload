@@ -129,7 +129,7 @@ class CRM_Externaldataload_LoadAssent
       1 => [Civi::service('nbrBackbone')->getTargetRecordTypeId(), "Integer"],
       2 => [0, "Integer"],
       3 => [1, "Integer"],
-      4 => [Civi::service('nbrBackbone')->getassentActivityTypeId(), "Integer"],
+      4 => [Civi::service('nbrBackbone')->getAssentActivityTypeId(), "Integer"],
       5 => [$assentDate . "%", "String"],
       6 => [(int) $contactId, "Integer"],
       7 => [$assentPisVersion, "String"],
