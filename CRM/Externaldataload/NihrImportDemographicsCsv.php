@@ -200,8 +200,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         // format data (e.g. mixed case, trim...)
         $data = $this->formatData($data);
 
+        CRM_Core_DAO::disableFullGroupByMode();
         // add volunteer or update data of existing volunteer
         list($contactId, $dataStored, $new_volunteer, $project_identifier) = $this->addContact($data);
+        CRM_Core_DAO::reenableFullGroupByMode();
         // data is not stored if no local identifier is given or if the existing volunteer has a status
         // other than active or pending
         if ($dataStored) {
@@ -1007,6 +1009,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
       try {
         // create/update volunteer record
+        $params['debug'] = 1;
         $result = civicrm_api3("Contact", "create", $params);
         $this->_logger->logMessage('Volunteer ' . $data['participant_id'] . ' ' . $identifier . ' (' . (int)$result['id'] . ') successfully loaded/updated. New volunteer: ' . $new_volunteer, 'INFO');
         $contactId = $result['id'];
@@ -1859,7 +1862,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (is_null($caseId)) {
       $caseId = CRM_Nihrbackbone_NbrRecruitmentCase::getActiveRecruitmentCaseId($contactId);
     }
-
     $params = [
       "activity_type_id" => $activityType,
       "target_contact_id" => $contactId,
@@ -2304,7 +2306,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         ];
 
         try {
+          CRM_Core_DAO::disableFullGroupByMode();
           $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
+          CRM_Core_DAO::reenableFullGroupByMode();
           if ($xdata->fetch()) {
             $count = $xdata->cnt;
             $id = $xdata->id;
@@ -2342,7 +2346,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     ];
 
     try {
+      CRM_Core_DAO::disableFullGroupByMode();
       $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
+      CRM_Core_DAO::reenableFullGroupByMode();
       if ($xdata->fetch()) {
         $cnt = $xdata->cnt;
         $id2 = $xdata->id2;

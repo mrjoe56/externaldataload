@@ -1,4 +1,5 @@
 ## Version 1.40
+* EH: added disable/enableFullGroupMode around query, perhaps linked to error reported by Carola
 * update HLQ data load
 
 ## Version 1.39
