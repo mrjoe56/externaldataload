@@ -55,7 +55,7 @@ class CRM_Externaldataload_LoadAssent
               $assentVersion => $data['assent_version'],
               $assentPisVersion => $data['assent_pis_version'],
               'activity_date_time' => $assentDate->format('Y-m-d'),
-              $assentStatus => $data['assent_status'],
+              $assentStatus => 'consent_form_status_correct',
               'case_id' => (int)$caseID,
               'subject' => $subject,
             ]);
