@@ -40,9 +40,9 @@ class CRM_Externaldataload_LoadAssent
       else {
         $assentDate = date('Y-m-d', strtotime($data['assent_date']));
         if ($this->countExistingAssent($contactId, $assentDate, $data['assent_pis_version'], $data['assent_version']) == 0) {
-          $assentVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getNbrAssentDataCustomField('nbr_assent_version', 'id');
-          $assentPisVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getNbrAssentDataCustomField('nbr_assent_pis_version', 'id');
-          $assentStatus = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getNbrAssentDataCustomField('nbr_assent_status', 'id');
+          $assentVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getAssentDataCustomField('nbr_assent_version', 'id');
+          $assentPisVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getAssentDataCustomField('nbr_assent_pis_version', 'id');
+          $assentStatus = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getAssentDataCustomField('nbr_assent_status', 'id');
 
           // assent not yet on Civi - add assent to case
           $assentDate = new DateTime($data['assent_date']);
