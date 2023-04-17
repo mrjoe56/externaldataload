@@ -397,7 +397,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               $subject = "Assent";
               $nbrAssent->addAssent($contactId, $caseID, $subject, $data, $this->_logger);
             }
-
+            Civi::log()->info('Assent date '.$data['assent_date'] . ' is set is : '. (isset($data['assent_date']) && $data['assent_date'] <> '')   );
+            Civi::log()->info('Assent version is  '.$data['assent_version'] . ' is set is : '. (isset($data['assent_version']) && $data['assent_version'] <> '')   );
             // migrate paper questionnaire flag (IBD)
             if (isset($data['nihr_paper_hlq']) && $data['nihr_paper_hlq'] == 'Yes') {
               $this->addRecruitmentCaseActivity($contactId, 'nihr_paper_hlq', '', '', 'Completed', '', $caseID);
