@@ -23,8 +23,9 @@ class CRM_Externaldataload_LoadAssent
   public function addAssent($contactId, $caseID, $subject, $data, $logger)
   {
     // caseID cannot be empty, a assent is always linked to a (recruitment) case
-    if ($caseID == '') {
-      Civi::log()->error("Case ID is missing in " . __METHOD__);
+    if ($caseID == '' || $data['nbr_assent_version']=='' || $data['assent_date']=='') {
+//      Civi::log()->error("Case ID is missing in " . __METHOD__);
+      Civi::log()->error("Missing either case ID, Assent, or assent date is Add assent. Not adding");
     } else {
       $existingAssentVersion = $this->isExistingAssentVersion($data['assent_version']);
       $existingAssentPisVersion = $this->isExistingAssentPisVersion($data['assent_pis_version']);
