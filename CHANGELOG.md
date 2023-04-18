@@ -1,6 +1,8 @@
-## Version 1.41
-*Updated names of functions in LoadAssent to match backbone and made it so assent sends status as correct by default
+## Version 1.42
+* CYP: add panel without site
 
+## Version 1.41
+* Updated names of functions in LoadAssent to match backbone and made it so assent sends status as correct by default
 
 ## Version 1.40
 * EH: added disable/enableFullGroupMode around query, perhaps linked to error reported by Carola

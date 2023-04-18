@@ -999,7 +999,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
 
       foreach ($data as $key => $value) {
-        if (!empty($value) || $value == 0) {
+        if (!empty($value)) {
           $params[$key] = $value;
         }
       }
@@ -1644,7 +1644,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
     if ($countMandatory < 2 &&
       // for rare migration data, only providing the panel without the site is sufficient
-      ($dataSource != 'rare_migration' || $panelData['panel_id'] == '')) {
+      // same for DCYPHR
+      (($dataSource != 'rare_migration' && $dataSource != 'cyp')
+        || $panelData['panel_id'] == '')) {
       $this->_logger->logMessage('No panel information provided for : ' . $contactID, 'ERROR');
       return;
     }
