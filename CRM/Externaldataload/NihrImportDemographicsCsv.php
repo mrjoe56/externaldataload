@@ -656,8 +656,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($newKey == 'other_study_type') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerParticipationInStudiesCustomField('nvpis_other_study_type', 'id');
         // multiple types possible
-        $x = explode('-', $value);
-        $value = CRM_Core_DAO::VALUE_SEPARATOR . implode(CRM_Core_DAO::VALUE_SEPARATOR, $x);
+        if (!empty($value)) {
+          $x = explode('-', $value);
+          $value = CRM_Core_DAO::VALUE_SEPARATOR . implode(CRM_Core_DAO::VALUE_SEPARATOR, $x);
+        }
       }
 
       //
