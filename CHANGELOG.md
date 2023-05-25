@@ -1,3 +1,6 @@
+## Version 1.43
+* CYP: do not create duplicate guardian records, guardian records are mapped on name and email address (or DOB, if provided)
+
 ## Version 1.42
 * CYP: add panel without site
 

@@ -919,19 +919,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
 
     // only continue if identifier for project is provided
-    if (($identifier <> '' and $identifier_type <> '') or $this->_dataSource == 'guardian') {
+    if ($identifier <> '' and $identifier_type <> '') {
       $data[$identifier_type] = $identifier;
 
       // check if ID already on database
-      if ($this->_dataSource <> 'guardian') {
-        $contactId = $volunteer->findVolunteerByAlias($identifier, $identifier_type, $this->_logger);
-        if (!$contactId) {
-          // check if volunteer is already on Civi under a different panel/without the given ID
+      $contactId = $volunteer->findVolunteerByAlias($identifier, $identifier_type, $this->_logger);
+      if (!$contactId) {
+        // check if volunteer/guardian is already on Civi under a different panel/without the given ID
+        if ($data['contact_sub_type'] == 'nihr_volunteer') {
           $contactId = $volunteer->findVolunteer($data, $this->_logger);
+        } elseif ($data['contact_sub_type'] == 'nbr_guardian') {
+          $contactId = $this->findGuardian($data, $this->_logger);
         }
-      } else {
-        // CYP (currently not used)
-        $contactId = $this->findGuardian($data, $this->_logger);
       }
 
       if ($contactId) {
@@ -2287,15 +2286,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   public function findGuardian($data, $logger)
   {
     $id = '';
+    $cnt = 0;
 
-    // Guardians records do not use identifiers other than BioResource ID, and they don't contain gender or DOB
-    // To avoid creating duplicates, test on name and email
+    // Guardian data usually does not contain DOB but email is mandatory
     // check on subtype guardian only - even if the person is registered as a volunteer, create a new record
 
     if (isset($data['first_name']) && $data['first_name'] <> '' &&
       isset($data['last_name']) && $data['last_name'] <> '' &&
       isset($data['email']) && $data['email'] <> '') {
-        $sql = "
+      $sql = "
           select count(*) as cnt, c.id as id
           from civicrm_contact c, civicrm_email e
           where c.contact_type = 'Individual'
@@ -2305,36 +2304,68 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           and c.id = e.contact_id
           and e.email = %3";
 
-        $queryParams = [
-          1 => [$data['first_name'], 'String'],
-          2 => [$data['last_name'], 'String'],
-          3 => [$data['email'], 'String']
-        ];
+      $queryParams = [
+        1 => [$data['first_name'], 'String'],
+        2 => [$data['last_name'], 'String'],
+        3 => [$data['email'], 'String']
+      ];
 
-        try {
-          CRM_Core_DAO::disableFullGroupByMode();
-          $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
-          CRM_Core_DAO::reenableFullGroupByMode();
-          if ($xdata->fetch()) {
-            $count = $xdata->cnt;
-            $id = $xdata->id;
-          }
-        } catch (Exception $ex) {
-          $logger->logMessage('Select FindGuardian (email) failed ' . $data['first_name'] . ' ' . $data['first_name']);
+      try {
+        CRM_Core_DAO::disableFullGroupByMode();
+        $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
+        CRM_Core_DAO::reenableFullGroupByMode();
+        if ($xdata->fetch()) {
+          $count = $xdata->cnt;
+          $id = $xdata->id;
         }
+      } catch (Exception $ex) {
+        $logger->logMessage('Select FindGuardian (email) failed ' . $data['first_name'] . ' ' . $data['first_name']);
+      }
+    }
 
-        // cnt = 1 -> ID unique for this volunteer
-        if ($count == 0) {
-          $id = ''; // just in case
-        } elseif ($count > 1) {
-          // there are already duplicated records of the volunteer - use one of these but give warning
-          $logger->logMessage('Multiple records linked to identifier ' . $data['first_name'] . ' ' . $data['last_name'] . ', used first one (' . $id . ')');
+    if ($cnt == 0 &&
+        isset($data['first_name']) && $data['first_name'] <> '' &&
+        isset($data['last_name']) && $data['last_name'] <> '' &&
+        isset($data['dob']) && $data['dob'] <> '') {
+      $sql = "
+        select count(*) as cnt, c.id as id
+        from civicrm_contact c
+        where c.contact_type = 'Individual'
+        and c.contact_sub_type = 'nbr_guardian'
+        and c.first_name = %1
+        and c.last_name = %2
+        and c.birth_date = %3";
+
+      $queryParams = [
+        1 => [$data['first_name'], 'String'],
+        2 => [$data['last_name'], 'String'],
+        3 => [$data['dob'], 'String']
+      ];
+
+      try {
+        CRM_Core_DAO::disableFullGroupByMode();
+        $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
+        CRM_Core_DAO::reenableFullGroupByMode();
+        if ($xdata->fetch()) {
+          $count = $xdata->cnt;
+          $id = $xdata->id;
         }
+      } catch (Exception $ex) {
+        $logger->logMessage('Select FindGuardian (dob) failed ' . $data['first_name'] . ' ' . $data['first_name']);
+      }
+    }
+
+    // cnt = 1 -> ID unique for this volunteer
+    if ($count == 0) {
+      $id = ''; // just in case
+    } elseif ($count > 1) {
+      // there are already duplicated records of the volunteer - use one of these but give warning
+      $logger->logMessage('Multiple records linked to identifier ' . $data['first_name'] . ' ' . $data['last_name'] . ', used first one (' . $id . ')');
     }
     return $id;
   }
 
-  public function addRelationship($contactId, $contact2, $relationshipType)
+    public function addRelationship($contactId, $contact2, $relationshipType)
   {
     // test if second contact is on orca and retrieve the contact ID
     $sql = "select count(*) as cnt, c.id as id2
