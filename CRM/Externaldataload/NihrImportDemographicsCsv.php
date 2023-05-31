@@ -556,9 +556,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_family_history', 'id');
       }
       // CYP only
-      /* if ($newKey == 'school') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_school', 'id');
-      } */
+      if ($newKey == 'school') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_school_id', 'id');
+      }
 
 
       // *** custom group 'Lifestyle'
@@ -1193,6 +1193,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             CRM_Core_DAO::executeQuery($insert, $insertParams);
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
+          }
+
+          // add guardian addresses to the child's record as well
+          if($data['link_address_to_dependant'] == 1) {
+              // &&&&& enter same address into child's record:
+              // master_id: civicrm_address.id in guardian address record that was just inserted
+              // contact_id: child record; $data['guardian_of'] has the child's 'cih_type_dcyphr_id'
+              ;
           }
         }
       }

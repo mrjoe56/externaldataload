@@ -29,6 +29,7 @@
   "phone_mobile": "phone_mobile",
   "phone": "phone",
   "preferred_mode_of_contact": "preferred_communication_method",
+  "link_address_to_dependant": "link_address_to_dependant",
 
   "consent_date": "consent_date",
   "consent_version": "consent_version",
