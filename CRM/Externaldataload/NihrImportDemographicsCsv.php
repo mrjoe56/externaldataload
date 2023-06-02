@@ -1093,6 +1093,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   {
     // *** add or update volunteer home address
     if ($data['address_1'] <> '' && $data['postcode'] <> '') {
+      $this->_logger->logMessage("in add address for ".$contactID, "INFO");
 
       // compare address line and postcode on lowercase without special chars
       $address_1_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['address_1']));
@@ -1116,6 +1117,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         6 => [$postcode_comp, "String"],
       ]);
       if ($dao->fetch()) {
+
+        $this->_logger->logMessage("dao has been executed in add address for ".$contactID, "INFO");
         if ($dao->addressCount == 0 && $dao->fcdCount == 0) {
           $primary = 0;
           if (isset($data['is_primary']) && $data['is_primary'] == 1) {
@@ -1199,6 +1202,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           $insert .= ") VALUES(" . implode(", ", $columns) . ")";
           try {
+            $this->_logger->logMessage("insert for ".$contactID. "is ".$insert, "INFO");
             CRM_Core_DAO::executeQuery($insert, $insertParams);
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
@@ -1208,6 +1212,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // add guardian addresses to the child's record as well
           if($data['link_address_to_dependant'] == 1 && $data['guardian_of']) {
+            $this->_logger->logMessage("Started running the link address to dependant code for ".$contactID, "INFO");
+
             $decypherId=$data['guardian_of'];
 
 
