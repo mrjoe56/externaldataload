@@ -1208,42 +1208,50 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           // add guardian addresses to the child's record as well
           if($data['link_address_to_dependant'] == 1 && $data['guardian_of']) {
-            $dependantId=$data['guardian_of'];
+            $decypherId=$data['guardian_of'];
 
-            $getAddressIdQuery= "SELECT id FROM civicrm_address WHERE  
+
+            $getDependantIdQuery= "SELECT entity_id FROM civicrm_value_contact_id_history WHERE identifier =%1";
+            $getdependantIdParams = [
+              1 => [$decypherId, "String"]];
+
+            $dependantId = CRM_Core_DAO::singleValueQuery($getDependantIdQuery, $getdependantIdParams);
+
+            if($dependantId){
+
+
+              $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE  
             contact_id=%1 AND location_type_id=%2 AND is_primary=%3 AND street_address=%4 AND
             city= %5 AND postal_code=%6 LIMIT 1";
-            $getAddressParams = [
-              1 => [(int)$contactID, "Integer"],
-              2 => [(int)$location, "Integer"],
-              3 => [(int)$primary, "Integer"],
-              4 => [$data['address_1'], "String"],
-              5 => [$data['address_4'], "String"],
-              6 => [$data['postcode'], "String"],
+              $getAddressParams = [
+                1 => [(int) $contactID, "Integer"],
+                2 => [(int) $location, "Integer"],
+                3 => [(int) $primary, "Integer"],
+                4 => [$data['address_1'], "String"],
+                5 => [$data['address_4'], "String"],
+                6 => [$data['postcode'], "String"],
 
-            ];
-            $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
-            $this->_logger->logMessage("Master id is ".$masterId ,"INFO");
+              ];
+              $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
+              $this->_logger->logMessage("Master id is " . $masterId, "INFO");
 
-            if($masterId){
-              // Make new dataset but for the dependant
-              $newData= $data;
-              $newData['contact_id']=$dependantId;
-              $newData['guardian_of']= NULL; // probably not needed
-              $newData['link_address_to_dependant']= 0;
-              $newData['master_id']=$masterId;
-              $this->_logger->logMessage("Adding new contact for dependant, id:  ".$data['guardian_of']. "INFO");
-              // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
+              if ($masterId) {
+                // Make new dataset but for the dependant
+                $newData = $data;
+                $newData['contact_id'] = $dependantId;
+                $newData['guardian_of'] = NULL; // probably not needed
+                $newData['link_address_to_dependant'] = 0;
+                $newData['master_id'] = $masterId;
+                $this->_logger->logMessage("Adding new contact for dependant, id:  " . $data['guardian_of'] . "INFO");
+                // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
 
-              $this->addAddress($dependantId, $newData);
-
-
+                $this->addAddress($dependantId, $newData);
+              }
             }
 
-
-              // &&&&& enter same address into child's record:
+            // &&&&& enter same address into child's record:
               // master_id: civicrm_address.id in guardian address record that was just inserted
-              // contact_id: child record; $data['guardian_of'] has the child's 'cih_type_dcyphr_id'
+                // contact_id: child record; $data['guardian_of'] has the child's 'cih_type_dcyphr_id'
               ;
           }
         }
