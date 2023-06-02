@@ -1242,7 +1242,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
                 $newData['guardian_of'] = NULL; // probably not needed
                 $newData['link_address_to_dependant'] = 0;
                 $newData['master_id'] = $masterId;
-                $this->_logger->logMessage("Adding new contact for dependant, id:  " . $data['guardian_of'] . "INFO");
+                $this->_logger->logMessage("Adding new contact for dependant, id:  " . $data['guardian_of']  . "dependant id is ". $dependantId "INFO");
                 // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
 
                 $this->addAddress($dependantId, $newData);
