@@ -1205,25 +1205,25 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
           }
-
         }
       }
+
       /**
        * After address is found or added, use this address for any existing dependants of guardian
-       * Only affected by if statement that checks if there's an actual address contained
+       *  Only call if user has a dependant and is going to link address
        */
-      // Only call if user has a dependant and is going to link address
+
       if($data['link_address_to_dependant'] == 1 && $data['guardian_of']) {
         // Use addresses set in previous query
         $this->_logger->logMessage("Adding new contact for dependant, decypher id is:  " . $data['guardian_of'] , "INFO");
         $decypherId=$data['guardian_of'];
         $getDependantIdQuery= "SELECT entity_id FROM civicrm_value_contact_id_history WHERE identifier =%1";
-        $getdependantIdParams = [
-          1 => [$decypherId, "String"]];
+        $getdependantIdParams = [ 1 => [$decypherId, "String"]];
         $dependantId = CRM_Core_DAO::singleValueQuery($getDependantIdQuery, $getdependantIdParams);
 
         // If contact_id exists for decypher id
         if($dependantId){
+          // Get ID to be used as master_id (Links to guardians address ID)
           $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
           $getAddressParams = [
             1 => [(int) $contactID, "Integer"],
@@ -1244,10 +1244,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addAddress($dependantId, $newData);
           }
         }
-
       }
-
-
     }
   }
 
