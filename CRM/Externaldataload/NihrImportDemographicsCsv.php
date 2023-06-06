@@ -1205,14 +1205,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
           }
-          // add guardian addresses to the child's record as well
-          // &&&&& enter same address into child's record:
-          // master_id: civicrm_address.id in guardian address record that was just inserted
-          // contact_id: child record; $data['guardian_of'] has the child's 'cih_type_dcyphr_id'
+
         }
       }
       /**
-       * After address is found or added, use this address for any existing dependants
+       * After address is found or added, use this address for any existing dependants of guardian
        * Only affected by if statement that checks if there's an actual address contained
        */
       // Only call if user has a dependant and is going to link address
