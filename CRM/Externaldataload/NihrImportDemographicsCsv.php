@@ -1275,18 +1275,19 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         // If contact_id exists for decypher id
         if($dependantId){
           $this->_logger->logMessage("Adding new contact for dependant, dependent id is:  " . $dependantId , "INFO");
-          $getAddressParams = CRM_Core_DAO::executeQuery($query, [
-            1 => [(int) $contactID, "Integer"],
-            2 => [$address_1_comp, "String"],
-            3 => [$postcode_comp, "String"],
-          ]);
+                        $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE
+                        contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
+          $this->_logger->logMessage("Data params are,  address_1: " . $data['address_1'] . " city ".$data['address_4'] . "Postcode ".$data['postcode'], "INFO");
 
-          // Address has either already been added, or exists already
-          $getAddressQuery=  "SELECT id FROM civicrm_address WHERE contact_id = %1 and REGEXP_REPLACE(LOWER(street_address), '[^a-z0-9]', '') = %2
-          and REGEXP_REPLACE(LOWER(postal_code), '[^a-z0-9]', '') = %3";
 
-          $masterId = CRM_Core_DAO::singleValueQuery($getAddressQuery, $getAddressParams);
-          $this->_logger->logMessage("Master id is " . $masterId, "INFO");
+          $getAddressParams = [
+                          1 => [(int) $contactID, "Integer"],
+                          2 => [$data['address_1'], "String"],
+                          3 => [$data['postcode'], "String"]
+                        ];
+
+                        $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
+                        $this->_logger->logMessage("Master id is " . $masterId, "INFO");
 
 
           if ($masterId) {
@@ -1296,7 +1297,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $newData['guardian_of'] = NULL; // probably not needed
             $newData['link_address_to_dependant'] = 0;
             $newData['master_id'] = $masterId;
-            $this->_logger->logMessage("Adding new contact for dependant, id:  " . $data['guardian_of']  . "dependant id is ". $dependantId, "INFO");
+            $this->_logger->logMessage("About to run addAddress for dependant. dependant id is ". $dependantId, "INFO");
             // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
             $this->addAddress($dependantId, $newData);
           }
