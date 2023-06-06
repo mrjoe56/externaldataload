@@ -1198,8 +1198,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $insert .= ", master_id";
             $columns[] = "%" . $index;
           }
-
-
           $insert .= ") VALUES(" . implode(", ", $columns) . ")";
           try {
             $this->_logger->logMessage("insert for ".$contactID. "is ".$insert, "INFO");
@@ -1207,55 +1205,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
           }
-
-
-
           // add guardian addresses to the child's record as well
           // &&&&& enter same address into child's record:
           // master_id: civicrm_address.id in guardian address record that was just inserted
           // contact_id: child record; $data['guardian_of'] has the child's 'cih_type_dcyphr_id'
-          ;
-//          if($data['link_address_to_dependant'] == 1 && $data['guardian_of']) {
-//            $this->_logger->logMessage("Started running the link address to dependant code for ".$contactID, "INFO");
-//            // Convert guardian_of decypher id to contact id so it can be used in civicrm_address
-//            $decypherId=$data['guardian_of'];
-//            $getDependantIdQuery= "SELECT entity_id FROM civicrm_value_contact_id_history WHERE identifier =%1";
-//            $getdependantIdParams = [
-//              1 => [$decypherId, "String"]];
-//            $dependantId = CRM_Core_DAO::singleValueQuery($getDependantIdQuery, $getdependantIdParams);
-//
-//            // If check was successful:
-//            if($dependantId){
-//              $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE
-//              contact_id=%1 AND location_type_id=%2 AND is_primary=%3 AND street_address=%4 AND city= %5 AND postal_code=%6 LIMIT 1";
-//
-//              $getAddressParams = [
-//                1 => [(int) $contactID, "Integer"],
-//                2 => [(int) $location, "Integer"],
-//                3 => [(int) $primary, "Integer"],
-//                4 => [$data['address_1'], "String"],
-//                5 => [$data['address_4'], "String"],
-//                6 => [$data['postcode'], "String"],
-//              ];
-//
-//              $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
-//              $this->_logger->logMessage("Master id is " . $masterId, "INFO");
-//
-//              if ($masterId) {
-//                // Make new dataset but for the dependant
-//                $newData = $data;
-//                $newData['contact_id'] = $dependantId;
-//                $newData['guardian_of'] = NULL; // probably not needed
-//                $newData['link_address_to_dependant'] = 0;
-//                $newData['master_id'] = $masterId;
-//                $this->_logger->logMessage("Adding new contact for dependant, id:  " . $data['guardian_of']  . "dependant id is ". $dependantId, "INFO");
-//                // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
-//
-//                $this->addAddress($dependantId, $newData);
-//              }
-//            }
-//
-//          }
         }
       }
       /**
@@ -1274,22 +1227,14 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         // If contact_id exists for decypher id
         if($dependantId){
-          $this->_logger->logMessage("Adding new contact for dependant, dependent id is:  " . $dependantId , "INFO");
-                        $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE
-                        contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
-          $this->_logger->logMessage("Data params are,  address_1: " . $data['address_1'] . " city ".$data['address_4'] . "Postcode ".$data['postcode'], "INFO");
-
-
+          $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
           $getAddressParams = [
-                          1 => [(int) $contactID, "Integer"],
-                          2 => [$data['address_1'], "String"],
-                          3 => [$data['postcode'], "String"]
-                        ];
-
-                        $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
-                        $this->_logger->logMessage("Master id is " . $masterId, "INFO");
-
-
+            1 => [(int) $contactID, "Integer"],
+            2 => [$data['address_1'], "String"],
+            3 => [$data['postcode'], "String"]
+          ];
+          $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
+          $this->_logger->logMessage("Master id for ".$dependantId. "is ". $masterId, "INFO");
           if ($masterId) {
             // Make new dataset but for the dependant
             $newData = $data;
@@ -1297,7 +1242,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $newData['guardian_of'] = NULL; // probably not needed
             $newData['link_address_to_dependant'] = 0;
             $newData['master_id'] = $masterId;
-            $this->_logger->logMessage("About to run addAddress for dependant. dependant id is ". $dependantId, "INFO");
+            $this->_logger->logMessage("About to run addAddress for dependant of".$contactID." dependant id is ". $dependantId, "INFO");
             // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
             $this->addAddress($dependantId, $newData);
           }
