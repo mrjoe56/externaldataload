@@ -202,7 +202,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         CRM_Core_DAO::disableFullGroupByMode();
         // add volunteer or update data of existing volunteer
-        list($contactId, $dataStored, $new_volunteer, $project_identifier) = $this->addContact($data);
+        [$contactId, $dataStored, $new_volunteer, $project_identifier] = $this->addContact($data);
         CRM_Core_DAO::reenableFullGroupByMode();
         // data is not stored if no local identifier is given or if the existing volunteer has a status
         // other than active or pending
@@ -556,9 +556,9 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_family_history', 'id');
       }
       // CYP only
-      /* if ($newKey == 'school') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_school', 'id');
-      } */
+      if ($newKey == 'school') {
+        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getGeneralObservationCustomField('nvgo_school_id', 'id');
+      }
 
 
       // *** custom group 'Lifestyle'
@@ -919,19 +919,18 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
 
     // only continue if identifier for project is provided
-    if (($identifier <> '' and $identifier_type <> '') or $this->_dataSource == 'guardian') {
+    if ($identifier <> '' and $identifier_type <> '') {
       $data[$identifier_type] = $identifier;
 
       // check if ID already on database
-      if ($this->_dataSource <> 'guardian') {
-        $contactId = $volunteer->findVolunteerByAlias($identifier, $identifier_type, $this->_logger);
-        if (!$contactId) {
-          // check if volunteer is already on Civi under a different panel/without the given ID
+      $contactId = $volunteer->findVolunteerByAlias($identifier, $identifier_type, $this->_logger);
+      if (!$contactId) {
+        // check if volunteer/guardian is already on Civi under a different panel/without the given ID
+        if ($data['contact_sub_type'] == 'nihr_volunteer') {
           $contactId = $volunteer->findVolunteer($data, $this->_logger);
+        } elseif ($data['contact_sub_type'] == 'nbr_guardian') {
+          $contactId = $this->findGuardian($data, $this->_logger);
         }
-      } else {
-        // CYP (currently not used)
-        $contactId = $this->findGuardian($data, $this->_logger);
       }
 
       if ($contactId) {
@@ -1082,8 +1081,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
   }
 
+
+
   /**
-   * Method to add addresss
+   * Method to add addresss, contains recursive function loop for guardian dependents
    *
    * @param $contactID
    * @param $data
@@ -1092,6 +1093,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   {
     // *** add or update volunteer home address
     if ($data['address_1'] <> '' && $data['postcode'] <> '') {
+      $this->_logger->logMessage("in add address for ".$contactID, "INFO");
 
       // compare address line and postcode on lowercase without special chars
       $address_1_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['address_1']));
@@ -1115,6 +1117,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         6 => [$postcode_comp, "String"],
       ]);
       if ($dao->fetch()) {
+
+        $this->_logger->logMessage("dao has been executed in add address for ".$contactID, "INFO");
         if ($dao->addressCount == 0 && $dao->fcdCount == 0) {
           $primary = 0;
           if (isset($data['is_primary']) && $data['is_primary'] == 1) {
@@ -1188,12 +1192,56 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
               $columns[] = "%" . $index;
             }
           }
-
+          if ($data['master_id'] <> '') {
+            $index++;
+            $insertParams[$index] = [$data['master_id'], "Integer"];
+            $insert .= ", master_id";
+            $columns[] = "%" . $index;
+          }
           $insert .= ") VALUES(" . implode(", ", $columns) . ")";
           try {
+            $this->_logger->logMessage("insert for ".$contactID. "is ".$insert, "INFO");
             CRM_Core_DAO::executeQuery($insert, $insertParams);
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
+          }
+        }
+      }
+
+      /**
+       * After address is found or added, use this address for any existing dependants of guardian
+       *  Only call if user has a dependant and is going to link address
+       */
+
+      if($data['link_address_to_dependant'] == 1 && $data['guardian_of']) {
+        // Use addresses set in previous query
+        $decypherId=$data['guardian_of'];
+        $getDependantIdQuery= "SELECT entity_id FROM civicrm_value_contact_id_history WHERE identifier =%1";
+        $getdependantIdParams = [ 1 => [$decypherId, "String"]];
+        $dependantId = CRM_Core_DAO::singleValueQuery($getDependantIdQuery, $getdependantIdParams);
+
+        // If contact_id exists for decypher id
+        if($dependantId){
+
+
+          // Get ID to be used as master_id (Links to guardians address ID)
+          $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
+          $getAddressParams = [
+            1 => [(int) $contactID, "Integer"],
+            2 => [$data['address_1'], "String"],
+            3 => [$data['postcode'], "String"]
+          ];
+          $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
+          $this->_logger->logMessage("Adding new dependant for guardian: ".$contactID . " Dependant id is ".$dependantId . " master id is ".$masterId, "INFO");
+          if ($masterId) {
+            // Make new dataset but for the dependant
+            $newData = $data;
+            $newData['contact_id'] = $dependantId;
+            $newData['guardian_of'] = NULL; // probably not needed
+            $newData['link_address_to_dependant'] = 0;
+            $newData['master_id'] = $masterId;
+            // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
+            $this->addAddress($dependantId, $newData);
           }
         }
       }
@@ -2287,15 +2335,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   public function findGuardian($data, $logger)
   {
     $id = '';
+    $cnt = 0;
 
-    // Guardians records do not use identifiers other than BioResource ID, and they don't contain gender or DOB
-    // To avoid creating duplicates, test on name and email
+    // Guardian data usually does not contain DOB but email is mandatory
     // check on subtype guardian only - even if the person is registered as a volunteer, create a new record
 
     if (isset($data['first_name']) && $data['first_name'] <> '' &&
       isset($data['last_name']) && $data['last_name'] <> '' &&
       isset($data['email']) && $data['email'] <> '') {
-        $sql = "
+      $sql = "
           select count(*) as cnt, c.id as id
           from civicrm_contact c, civicrm_email e
           where c.contact_type = 'Individual'
@@ -2305,36 +2353,68 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           and c.id = e.contact_id
           and e.email = %3";
 
-        $queryParams = [
-          1 => [$data['first_name'], 'String'],
-          2 => [$data['last_name'], 'String'],
-          3 => [$data['email'], 'String']
-        ];
+      $queryParams = [
+        1 => [$data['first_name'], 'String'],
+        2 => [$data['last_name'], 'String'],
+        3 => [$data['email'], 'String']
+      ];
 
-        try {
-          CRM_Core_DAO::disableFullGroupByMode();
-          $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
-          CRM_Core_DAO::reenableFullGroupByMode();
-          if ($xdata->fetch()) {
-            $count = $xdata->cnt;
-            $id = $xdata->id;
-          }
-        } catch (Exception $ex) {
-          $logger->logMessage('Select FindGuardian (email) failed ' . $data['first_name'] . ' ' . $data['first_name']);
+      try {
+        CRM_Core_DAO::disableFullGroupByMode();
+        $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
+        CRM_Core_DAO::reenableFullGroupByMode();
+        if ($xdata->fetch()) {
+          $count = $xdata->cnt;
+          $id = $xdata->id;
         }
+      } catch (Exception $ex) {
+        $logger->logMessage('Select FindGuardian (email) failed ' . $data['first_name'] . ' ' . $data['first_name']);
+      }
+    }
 
-        // cnt = 1 -> ID unique for this volunteer
-        if ($count == 0) {
-          $id = ''; // just in case
-        } elseif ($count > 1) {
-          // there are already duplicated records of the volunteer - use one of these but give warning
-          $logger->logMessage('Multiple records linked to identifier ' . $data['first_name'] . ' ' . $data['last_name'] . ', used first one (' . $id . ')');
+    if ($cnt == 0 &&
+        isset($data['first_name']) && $data['first_name'] <> '' &&
+        isset($data['last_name']) && $data['last_name'] <> '' &&
+        isset($data['dob']) && $data['dob'] <> '') {
+      $sql = "
+        select count(*) as cnt, c.id as id
+        from civicrm_contact c
+        where c.contact_type = 'Individual'
+        and c.contact_sub_type = 'nbr_guardian'
+        and c.first_name = %1
+        and c.last_name = %2
+        and c.birth_date = %3";
+
+      $queryParams = [
+        1 => [$data['first_name'], 'String'],
+        2 => [$data['last_name'], 'String'],
+        3 => [$data['dob'], 'String']
+      ];
+
+      try {
+        CRM_Core_DAO::disableFullGroupByMode();
+        $xdata = CRM_Core_DAO::executeQuery($sql, $queryParams);
+        CRM_Core_DAO::reenableFullGroupByMode();
+        if ($xdata->fetch()) {
+          $count = $xdata->cnt;
+          $id = $xdata->id;
         }
+      } catch (Exception $ex) {
+        $logger->logMessage('Select FindGuardian (dob) failed ' . $data['first_name'] . ' ' . $data['first_name']);
+      }
+    }
+
+    // cnt = 1 -> ID unique for this volunteer
+    if ($count == 0) {
+      $id = ''; // just in case
+    } elseif ($count > 1) {
+      // there are already duplicated records of the volunteer - use one of these but give warning
+      $logger->logMessage('Multiple records linked to identifier ' . $data['first_name'] . ' ' . $data['last_name'] . ', used first one (' . $id . ')');
     }
     return $id;
   }
 
-  public function addRelationship($contactId, $contact2, $relationshipType)
+    public function addRelationship($contactId, $contact2, $relationshipType)
   {
     // test if second contact is on orca and retrieve the contact ID
     $sql = "select count(*) as cnt, c.id as id2
