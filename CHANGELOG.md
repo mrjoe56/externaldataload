@@ -4,9 +4,6 @@
 ## Version 1.43
 * Updated names of participationinstudies backbone functions to be volunteerparticipationinstudies to match changes (https://www.wrike.com/open.htm?id=1093689558)
 
-
->>>>>>> 52de3741b22ed4cf5ca4d735bc142ac7f747c2c2
-
 ## Version 1.42
 * CYP: add panel without site
 
