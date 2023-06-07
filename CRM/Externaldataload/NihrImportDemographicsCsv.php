@@ -1093,8 +1093,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   {
     // *** add or update volunteer home address
     if ($data['address_1'] <> '' && $data['postcode'] <> '') {
-      $this->_logger->logMessage("in add address for ".$contactID, "INFO");
-
       // compare address line and postcode on lowercase without special chars
       $address_1_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['address_1']));
       $postcode_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['postcode']));
@@ -1118,7 +1116,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       ]);
       if ($dao->fetch()) {
 
-        $this->_logger->logMessage("dao has been executed in add address for ".$contactID, "INFO");
         if ($dao->addressCount == 0 && $dao->fcdCount == 0) {
           $primary = 0;
           if (isset($data['is_primary']) && $data['is_primary'] == 1) {
@@ -1200,7 +1197,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           }
           $insert .= ") VALUES(" . implode(", ", $columns) . ")";
           try {
-            $this->_logger->logMessage("insert for ".$contactID. "is ".$insert, "INFO");
             CRM_Core_DAO::executeQuery($insert, $insertParams);
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
@@ -1222,8 +1218,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         // If contact_id exists for decypher id
         if($dependantId){
-
-
           // Get ID to be used as master_id (Links to guardians address ID)
           $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
           $getAddressParams = [
@@ -1232,7 +1226,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             3 => [$data['postcode'], "String"]
           ];
           $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
-          $this->_logger->logMessage("Adding new dependant for guardian: ".$contactID . " Dependant id is ".$dependantId . " master id is ".$masterId, "INFO");
+          $this->_logger->logMessage("Adding new dependant address for guardian: ".$contactID . " Dependant id is ".$dependantId . " master id is ".$masterId, "INFO");
+
           if ($masterId) {
             // Make new dataset but for the dependant
             $newData = $data;
@@ -1242,6 +1237,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $newData['master_id'] = $masterId;
             // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
             $this->addAddress($dependantId, $newData);
+          }else{
+            $this->_logger->logMessage("No master address ID found for : ".$contactID . " No address added to dependant: ".$dependantId  , "WARNING");
           }
         }
       }
