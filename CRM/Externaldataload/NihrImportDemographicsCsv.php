@@ -1215,7 +1215,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
       if($data['link_address_to_dependant'] == 1 && $data['guardian_of']) {
         // Use addresses set in previous query
-        $this->_logger->logMessage("Adding new contact for dependant, decypher id is:  " . $data['guardian_of'] , "INFO");
         $decypherId=$data['guardian_of'];
         $getDependantIdQuery= "SELECT entity_id FROM civicrm_value_contact_id_history WHERE identifier =%1";
         $getdependantIdParams = [ 1 => [$decypherId, "String"]];
@@ -1223,6 +1222,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         // If contact_id exists for decypher id
         if($dependantId){
+
+
           // Get ID to be used as master_id (Links to guardians address ID)
           $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
           $getAddressParams = [
@@ -1231,7 +1232,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             3 => [$data['postcode'], "String"]
           ];
           $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
-          $this->_logger->logMessage("Master id for ".$dependantId. "is ". $masterId, "INFO");
+          $this->_logger->logMessage("Adding new dependant for guardian: ".$contactID . " Dependant id is ".$dependantId . " master id is ".$masterId, "INFO");
           if ($masterId) {
             // Make new dataset but for the dependant
             $newData = $data;
@@ -1239,7 +1240,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $newData['guardian_of'] = NULL; // probably not needed
             $newData['link_address_to_dependant'] = 0;
             $newData['master_id'] = $masterId;
-            $this->_logger->logMessage("About to run addAddress for dependant of".$contactID." dependant id is ". $dependantId, "INFO");
             // Use as recursive function to avoid code repeat, add the new address + data, but next loop it will not repeat
             $this->addAddress($dependantId, $newData);
           }
