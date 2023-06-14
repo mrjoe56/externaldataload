@@ -389,9 +389,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             }
 
             // assent (CYP only)
-            if (isset($data['assent_version']) && $data['assent_version'] <> '' &&
-              (isset($data['assent_date']) && $data['assent_date'] <> '')
-            ) {
+            if (isset($data['assent_version']) &&
+              (isset($data['assent_date']) && $data['assent_date'] <> '')) {
               $nbrAssent = new CRM_Externaldataload_LoadAssent();
               //$subject = "Assent " . $data['panel'] . " $project_identifier";
               $subject = "Assent";

@@ -1,3 +1,6 @@
+## version 1.45
+CYP: create assent activity for ages 3-5 without assent version
+
 ## Version 1.44
 * CYP: do not create duplicate guardian records, guardian records are mapped on name and email address (or DOB, if provided)
 

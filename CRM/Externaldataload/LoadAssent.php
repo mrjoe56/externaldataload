@@ -33,7 +33,8 @@ class CRM_Externaldataload_LoadAssent
           . $data['assent_pis_version'] . ' does not exist.' ,'warning');
         $data['assent_pis_version'] = '';
       }
-      if (!$existingAssentVersion) {
+      // for CYP age 3-5 no assent version is added but an assent activity with a PIS version
+      if ($data['assent_version'] <> '' && !$existingAssentVersion) {
         $logger->logMessage('Could not add assent for contact ID ' . $contactId . ' because assent version '
           . $data['assent_version'] . ' does not exist.' ,'error');
       }
