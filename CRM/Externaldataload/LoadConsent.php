@@ -81,6 +81,7 @@ class CRM_Externaldataload_LoadConsent
           if (isset($data['opted_out_of_gel_main']) && !empty($data['opted_out_of_gel_main'])) {
             $opted_out_of_gel_main = CRM_Core_DAO::VALUE_SEPARATOR.$data['opted_out_of_gel_main'].CRM_Core_DAO::VALUE_SEPARATOR;
           }
+          $result2="";
           try {
             $result2 = civicrm_api3('Activity', 'create', [
               'source_contact_id' => "user_contact_id",
@@ -106,11 +107,84 @@ class CRM_Externaldataload_LoadConsent
           } catch (CiviCRM_API3_Exception $ex) {
             $logger->logMessage('Error message when adding volunteer consent ' . $contactId . ' ' . $ex->getMessage(), 'error');
           }
+
+          // Add the linked consent pack id stuff
+
+          if( $result2!="" && isset($result2['id'])){
+//
+//            $activityId= $result2['id'];
+//
+//            if(isset($data['pack_id'])){
+//              $packId= $data['pack_id'];
+//
+//              $countPackSql= "SELECT COUNT(*) FROM civicrm_consent_pack_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.pack_id=%3";
+//              $countPackParams=[
+//                1=>[$activityId,"Integer"],
+//                2=>[$contactId,"Integer"],
+//                1=>[$packId,"String"],
+//              ];
+//              $packCount = CRM_Core_DAO::singleValueQuery($countPackSql, $countPackParams);
+//
+//              if($packCount>0){
+//
+//              }
+//            }
+//
+//            if(isset($data['panel_id'])){
+//              $panelId= $data['panel_id'];
+//
+//              $countPanelSql= "SELECT COUNT(*) FROM civicrm_consent_panel_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.panel_etc_id=%3";
+//              $countPanelParams=[
+//                1=>[$activityId,"Integer"],
+//                2=>[$contactId,"Integer"],
+//                1=>[$panelId,"String"],
+//              ];
+//              $panelCount= CRM_Core_DAO::singleValueQuery($countPanelSql, $countPanelParams);
+//              if($panelCount>0){
+//
+//              }
+//
+//            }
+
+          }
         }
       }
     }
   }
 
+
+
+  public function addPanelAndPackLink($contactId,$data,$activityData, $logger){
+
+    $activityId= $activityData['id'];
+
+    if(isset($data['pack_id'])){
+      $packId= $data['pack_id'];
+
+      $countPackSql= "SELECT COUNT(*) FROM civicrm_consent_pack_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.pack_id=%3";
+      $packParams=[1=>[$activityId,"Integer"], 2=>[$contactId,"Integer"], 3=>[$packId,"String"]];
+      $packCount = CRM_Core_DAO::singleValueQuery($countPackSql, $packParams);
+
+      if($packCount>0){
+        $insertPackSql="INSERT INTO civicrm_consent_pack_link (activity_id, contact_id, pack_id) VALUES (%1,%2,%3)";
+        CRM_Core_DAO::executeQuery($insertPackSql, $packParams);
+      }
+    }
+
+    if(isset($data['panel_id'])){
+      $panelId= $data['panel_id'];
+
+      $countPanelSql= "SELECT COUNT(*) FROM civicrm_consent_panel_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.panel_etc_id=%3";
+      $panelParams=[1=>[$activityId,"Integer"], 2=>[$contactId,"Integer"], 3=>[$panelId,"String"]];
+      $panelCount= CRM_Core_DAO::singleValueQuery($countPanelSql, $panelParams);
+      if($panelCount>0){
+
+        $insertPanelSql="INSERT INTO civicrm_consent_panel_link (activity_id, contact_id, panel_etc_id) VALUES (%1,%2,%3)";
+        CRM_Core_DAO::executeQuery($insertPanelSql, $panelParams);
+      }
+
+    }
+  }
   /**
    * Method to check if information leaflet version exists
    *
