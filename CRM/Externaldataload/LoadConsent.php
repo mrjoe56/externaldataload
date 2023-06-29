@@ -111,41 +111,7 @@ class CRM_Externaldataload_LoadConsent
           // Add the linked consent pack id stuff
 
           if( $result2!="" && isset($result2['id'])){
-//
-//            $activityId= $result2['id'];
-//
-//            if(isset($data['pack_id'])){
-//              $packId= $data['pack_id'];
-//
-//              $countPackSql= "SELECT COUNT(*) FROM civicrm_consent_pack_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.pack_id=%3";
-//              $countPackParams=[
-//                1=>[$activityId,"Integer"],
-//                2=>[$contactId,"Integer"],
-//                1=>[$packId,"String"],
-//              ];
-//              $packCount = CRM_Core_DAO::singleValueQuery($countPackSql, $countPackParams);
-//
-//              if($packCount>0){
-//
-//              }
-//            }
-//
-//            if(isset($data['panel_id'])){
-//              $panelId= $data['panel_id'];
-//
-//              $countPanelSql= "SELECT COUNT(*) FROM civicrm_consent_panel_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.panel_etc_id=%3";
-//              $countPanelParams=[
-//                1=>[$activityId,"Integer"],
-//                2=>[$contactId,"Integer"],
-//                1=>[$panelId,"String"],
-//              ];
-//              $panelCount= CRM_Core_DAO::singleValueQuery($countPanelSql, $countPanelParams);
-//              if($panelCount>0){
-//
-//              }
-//
-//            }
-
+            $this->addPanelAndPackLink($contactId,$data,$result2,$logger);
           }
         }
       }
@@ -154,6 +120,7 @@ class CRM_Externaldataload_LoadConsent
 
 
 
+  // Inserts the pack ID/Panel id into the link tables if it exists in data
   public function addPanelAndPackLink($contactId,$data,$activityData, $logger){
 
     $activityId= $activityData['id'];
