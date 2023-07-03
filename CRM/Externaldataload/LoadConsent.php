@@ -108,9 +108,11 @@ class CRM_Externaldataload_LoadConsent
             $logger->logMessage('Error message when adding volunteer consent ' . $contactId . ' ' . $ex->getMessage(), 'error');
           }
 
-          // Add the linked consent pack id stuff
 
+
+          //If consent activity exists, and the ID is set
           if( $result2!="" && isset($result2['id'])){
+            // Add the linked consent pack/panel ID.
             $this->addPanelAndPackLink($contactId,$data,$result2,$logger);
           }
         }
@@ -127,11 +129,10 @@ class CRM_Externaldataload_LoadConsent
 
     if(isset($data['pack_id'])){
       $packId= $data['pack_id'];
-
+      // Check if consent pack id link already exists. If it doesn't, add it
       $countPackSql= "SELECT COUNT(*) FROM civicrm_consent_pack_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.pack_id=%3";
       $packParams=[1=>[$activityId,"Integer"], 2=>[$contactId,"Integer"], 3=>[$packId,"String"]];
       $packCount = CRM_Core_DAO::singleValueQuery($countPackSql, $packParams);
-
       if($packCount>0){
         $insertPackSql="INSERT INTO civicrm_consent_pack_link (activity_id, contact_id, pack_id) VALUES (%1,%2,%3)";
         CRM_Core_DAO::executeQuery($insertPackSql, $packParams);
@@ -139,8 +140,8 @@ class CRM_Externaldataload_LoadConsent
     }
 
     if(isset($data['panel_id'])){
+      // Check if consent panel id link already exists. If it doesn't, add it
       $panelId= $data['panel_id'];
-
       $countPanelSql= "SELECT COUNT(*) FROM civicrm_consent_panel_link AS lk WHERE lk.activity_id=%1 AND lk.contact_id=%2 AND lk.panel_etc_id=%3";
       $panelParams=[1=>[$activityId,"Integer"], 2=>[$contactId,"Integer"], 3=>[$panelId,"String"]];
       $panelCount= CRM_Core_DAO::singleValueQuery($countPanelSql, $panelParams);
