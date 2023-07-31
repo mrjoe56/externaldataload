@@ -2272,7 +2272,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           }
         } else {
           // other consents allow recruitment of children and babies (e.g PIBD, CYP)
-          if ($age > 110 || $consent_date < $dob) {
+          if ($age > 110 || ($consent_date <> '' and $consent_date < $dob)) {
             $this->_logger->logMessage("$id DOB incorrect, not stored: $dob", 'WARNING');
             $dob = '';
           }
