@@ -1,3 +1,6 @@
+## version 1.46
+* Allow any DOB (must not be before consent date)
+
 ## version 1.45
 CYP: create assent activity for ages 3-5 without assent version
 
