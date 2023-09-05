@@ -1007,6 +1007,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       // *** dob - only enter for glad if age >= 16 and <100 to avoid overwriting corrected data
       if (isset($params['birth_date'])) {
         $params['birth_date'] = $this->checkDOB($identifier, $params['birth_date'], $params['consent_date'], $this->_dataSource);
+        if ($params['birth_date'] == '') { unset($params['birth_date']); } // will otherwise delete dob on the db, if exists
       }
 
       try {
@@ -2272,7 +2273,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           }
         } else {
           // other consents allow recruitment of children and babies (e.g PIBD, CYP)
-          if ($age > 110 || ($consent_date <> '' and $consent_date < $dob)) {
+          // if no consent date is provided it is assumed that this is a guardian record
+          if ($age > 110 || ($consent_date <> '' and $consent_date < $dob) || ($consent_date == '' and $age < 16)) {
             $this->_logger->logMessage("$id DOB incorrect, not stored: $dob", 'WARNING');
             $dob = '';
           }

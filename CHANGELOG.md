@@ -1,3 +1,6 @@
+## version 1.48
+* DOB check updated
+
 ## version 1.47
 * bug fix v1.46
 
