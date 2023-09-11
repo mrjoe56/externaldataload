@@ -296,7 +296,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             'cih_type_catgo_pack_id',
             'cih_type_cuh_pathology_id',
             'cih_type_gel_id',
-            'cih_type_hospital_number'
+            'cih_type_hospital_number',
+            'cih_type_wgsid',
+            'cih_type_egsid',
+            'cih_type_illumina_id'
           );
 
           foreach ($aliases as &$alias) {

@@ -1,3 +1,6 @@
+## version 1.49
+* adding historic rare disease identifiers for data upload: WGSID, EGSID, Illumina ID
+
 ## version 1.48
 * DOB check updated
 

@@ -197,6 +197,9 @@
   "cih_type_catgo_pack_id": "cih_type_catgo_pack_id",
   "cih_type_cuh_pathology_id": "cih_type_cuh_pathology_id",
   "cih_type_gel_id": "cih_type_gel_id",
+  "cih_type_wgsid": "cih_type_wgsid",
+  "cih_type_egsid": "cih_type_egsid",
+  "cih_type_illumina_id": "cih_type_illumina_id",
 
   "cih_type_guardian_id": "cih_type_guardian_id",
   "cih_type_dcyphr_id": "cih_type_dcyphr_id",
