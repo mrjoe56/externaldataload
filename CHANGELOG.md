@@ -1,3 +1,6 @@
+## version 1.50
+* PIBD/CYP: do not add relationship if inactive one already exists to the same guardian
+
 ## version 1.49
 * adding historic rare disease identifiers for data upload: WGSID, EGSID, Illumina ID
 

@@ -2414,7 +2414,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     return $id;
   }
 
-    public function addRelationship($contactId, $contact2, $relationshipType)
+  public function addRelationship($contactId, $contact2, $relationshipType)
   {
     // test if second contact is on orca and retrieve the contact ID
     $sql = "select count(*) as cnt, c.id as id2
@@ -2453,12 +2453,22 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $relTypeId = CRM_Core_DAO::singleValueQuery($sql);
 
         // NOTE: this creates the relationship 'backwards', using name_B_A (rather than name_a_b)
-        // rewrite if used for any other relationships
-        civicrm_api3('Relationship', 'create', [
+        // rewrite code if used for any other relationships
+
+        // check if relationship is already in place; do not check if 'active' - do not add if an inactive one
+        // already exists
+        $res = civicrm_api3('Relationship', 'get', [
           'contact_id_a' => $id2,
           'contact_id_b' => $contactId,
           'relationship_type_id' => $relTypeId,
         ]);
+        if($res['count'] == 0) {
+          civicrm_api3('Relationship', 'create', [
+            'contact_id_a' => $id2,
+            'contact_id_b' => $contactId,
+            'relationship_type_id' => $relTypeId,
+          ]);
+        }
       } catch (CiviCRM_API3_Exception $ex) {
         // not checked if relationship is already in place...
         if($ex->getMessage() <> 'Duplicate Relationship') {
