@@ -342,7 +342,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
             case "cyp":
               if ($data['cih_type_dcyphr_id'] <> '') {
-                $this->addAlias($contactId, 'cih_type_dcyphr_id', $data['cih_type_dcyphr_id'], 2);
+                $this->addAlias($contactId, 'cih_type_dcyphr_id', $data['cih_type_dcyphr_id'], 0);
               }
               if ($data['cih_type_guardian_id'] <> '') {
                 $this->addAlias($contactId, 'cih_type_guardian_id', $data['cih_type_guardian_id'], 2);
