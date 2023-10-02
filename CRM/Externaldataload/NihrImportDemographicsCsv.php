@@ -1608,6 +1608,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         ];
         $foundId = CRM_Core_DAO::singleValueQuery($query, $queryParams);
       }
+      if (!$foundId) {
+        // check if the ODS code provided is outdated - alias type 'old'
+        $query = "SELECT entity_id FROM civicrm_value_nbr_site_alias
+                    WHERE nsa_alias_type = 'nbr_site_alias_type_old' AND nsa_alias = %1 limit 1";
+        $queryParams = [
+          1 => [$name, "String"],
+        ];
+        $foundId = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+      }
     } else {
       // panel or centre provided
       $query = "SELECT id FROM civicrm_contact WHERE contact_type = %1 AND organization_name = %2 AND contact_sub_type = %3";

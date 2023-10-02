@@ -1,3 +1,6 @@
+## version 1.52
+* include old ODS codes for site mapping
+
 ## version 1.51
 * do not add multiple DCYPHR IDs to a volunteer record
 
