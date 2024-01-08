@@ -624,9 +624,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($newKey == 'exclude_from_studies_with_mri') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_no_mri', 'id');
       }
-      if ($newKey == 'genotypic_sex') {
-        $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_genotypic_sex', 'id');
-      }
       if ($newKey == 'gender_at_birth') {
         $newKey = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerSelectionEligibilityCustomField('nvse_gender_at_birth', 'id');
       }
