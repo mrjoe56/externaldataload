@@ -1,3 +1,6 @@
+## version 1.53
+* Do not overwrite first name if already stored under contact identifier 'Former/alternative surname'
+
 ## version 1.52
 * include old ODS codes for site mapping
 

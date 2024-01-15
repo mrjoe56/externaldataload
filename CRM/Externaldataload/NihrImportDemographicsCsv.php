@@ -969,6 +969,23 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             }
           }
         }
+        // 15/1/2024: same for first name (same alias type 'former surname' used)
+        if (isset($data['first_name']) && $data['first_name'] <> '') {
+          $dbFirstName = civicrm_api3('Contact', 'getvalue', [
+            'return' => "first_name",
+            'id' => $contactId,
+          ]);
+          if ($dbFirstName <> $data['first_name'] && $dbFirstName <> '' && $dbFirstName <> 'x') {
+            if ($this->checkFormerSurname($contactId, $data['first_name']) > 0) {
+              // first name is already stored as 'former surname' - don't overwrite in this case
+              $data['first_name'] = $dbFirstName;
+              $this->_logger->logMessage("$identifier ($contactId): first name already stored as 'former', not overwritten", 'WARNING');
+            } else {
+              $this->addAlias($contactId, 'cih_type_former_surname', $dbFirstName, 2);
+            }
+          }
+        }
+
       } else { // new record
 
         // ... but not for HLQ data (as this might be linked to withdrawn volunteers but not deleted from the cum file)
@@ -2302,7 +2319,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   private function checkFormerSurname($id, $name)
   {
     // check if given surname is already saved as 'former surname' for the volunteer
-
+    // 15/1/2024 same procedure (and alias type) used for first name
     try {
       $query = "
         SELECT count(*) as cnt
