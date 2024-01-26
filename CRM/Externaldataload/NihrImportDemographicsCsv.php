@@ -1063,18 +1063,26 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       } else {
 
         // --- only add if not already on database either as mail or as former communication data
-        $query = "SELECT COUNT(*) as emailCount,
-          (SELECT COUNT(*) FROM civicrm_value_fcd_former_comm_data
-          WHERE entity_id = %1 AND fcd_communication_type = %2 AND fcd_details LIKE %3) AS fcdCount
-          FROM civicrm_email WHERE contact_id = %1 and email = %4";
+        $query = "
+        select max(cnt) maxcnt from (
+            select count(*) cnt from civicrm_email
+            where contact_id = %1 and email = %4
+            union
+            select count(*) cnt from  civicrm_value_fcd_former_comm_data
+            where entity_id = %1 and fcd_communication_type = %2 AND fcd_details LIKE %3
+        ) t";
         $dao = CRM_Core_DAO::executeQuery($query, [
           1 => [(int)$contactID, "Integer"],
           2 => ["email", "String"],
           3 => ["%" . $data['email'] . "%", "String"],
           4 => [$data['email'], "String"],
         ]);
+
         if ($dao->fetch()) {
-          if ($dao->emailCount == 0 && $dao->fcdCount == 0) {
+          if ($dao->maxcnt == 0) {
+            // Note: the API takes care that the 'is_primary' flag is set correctly:
+            // * is_primary=1 is set for first email added (regardless of $primary)
+            // * is_primary is reset for existing email, if new one is added as 'primary'
             $primary = 0;
             if (isset($data['is_primary']) && $data['is_primary'] == 1) {
               $primary = 1;
@@ -1083,16 +1091,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             if (isset($data['contact_location']) && $data['contact_location'] <> '') {
               $location = $data['contact_location'];
             }
-            $insert = "INSERT INTO civicrm_email (contact_id, location_type_id, email, is_primary, is_billing, is_bulkmail, on_hold)
-              VALUES(%1, %2, %3, %4, 0, 0, 0)";
+
             try {
-              CRM_Core_DAO::executeQuery($insert, [
-                1 => [(int)$contactID, "Integer"],
-                2 => [(int)$location, "Integer"],
-                3 => [$data['email'], "String"],
-                4 => [(int)$primary, "Integer"],
-              ]);
-            } catch (CiviCRM_API3_Exception $ex) {
+              $result = civicrm_api3('Email', 'create', [
+                'contact_id' => $contactID,
+                'email' => $data['email'],
+                'is_primary' => $primary,
+                'location_type_id' => $location,
+                ]);
+              } catch (CiviCRM_API3_Exception $ex) {
               $this->_logger->logMessage("addEmail $contactID " . $ex->getMessage(), 'ERROR');
             }
           }
@@ -1100,7 +1107,6 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
     }
   }
-
 
 
   /**
@@ -1308,17 +1314,15 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($dao->fetch()) {
         if ($dao->phoneCount == 0 && $dao->fcdCount == 0) {
           try {
-            $insert = "INSERT INTO civicrm_phone (contact_id, phone, is_primary, location_type_id, phone_type_id) VALUES(%1, %2, %3, %4, %5)";
-            $insertParams = [
-              1 => [(int)$contactID, "Integer"],
-              2 => [$phoneNumber, "String"],
-              3 => [(int)$isPrimary, "Integer"],
-              4 => [(int)$phoneLocation, "Integer"],
-              5 => [(int)$phoneType, "Integer"],
-            ];
-            CRM_Core_DAO::executeQuery($insert, $insertParams);
-          } catch (Exception $ex) {
-            $this->_logger->logMessage('addPhone ' . $contactID . ' ' . $ex->getMessage(), 'ERROR');
+            $result = civicrm_api3('Phone', 'create', [
+              'contact_id' => $contactID,
+              'phone' => $phoneNumber,
+              'is_primary' => $isPrimary,
+              'location_type_id' => $phoneLocation,
+              'phone_type_id' => $phoneType,
+            ]);
+          } catch (CiviCRM_API3_Exception $ex) {
+            $this->_logger->logMessage("addPhone $contactID " . $ex->getMessage(), 'ERROR');
           }
         }
       }

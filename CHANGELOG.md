@@ -1,3 +1,6 @@
+## version 1.54
+* addEmail, addPhone: use API call instead of direct insert (is_primary previously incorrectly set in some cases)
+
 ## version 1.53
 * Do not overwrite first name if already stored under contact identifier 'Former/alternative surname'
 
