@@ -1143,87 +1143,36 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       if ($dao->fetch()) {
 
         if ($dao->addressCount == 0 && $dao->fcdCount == 0) {
-          $primary = 0;
-          if (isset($data['is_primary']) && $data['is_primary'] == 1) {
-            $primary = 1;
-          }
-
-          // **** Manage primary flag in accordance with existing addresses
-          $query2 = "SELECT a.id
-                    from civicrm_address a
-                    where a.contact_id = %1
-                    and is_primary  = 1";
-          $queryParams2 = [
-            1 => [$contactID, "Integer"],
-          ];
-          $address_id = CRM_Core_DAO::singleValueQuery($query2, $queryParams2);
-
-          // * if (primary=1 and other address already set to 'primary') update other flag to 0
-          if ($primary == 1 && isset($address_id)) {
-            try {
-              $query3 = "update civicrm_address
-                      set is_primary = 0
-                      where id = %1";
-              $queryParams3 = [
-                1 => [$address_id, "String"],
-              ];
-              CRM_Core_DAO::executeQuery($query3, $queryParams3);
-            } catch (Exception $ex) {
-            }
-          } // * if (primary=0 and no other address set as 'primary') set current address to primary nevertheless
-          elseif ($primary == 0 && !isset($address_id)) {
-            $primary = 1;
-          }
-
           $location = Civi::service('nbrBackbone')->getHomeLocationTypeId();
-          if (isset($data['location_type_id']) && $data['location_type_id'] <> '') {
-            $location = $data['location_type_id'];
+          if (isset($data['contact_location']) && $data['contact_location'] <> '') {
+            $location = $data['contact_location'];
           }
-          $columns = ['%1', '%2', '%3', '%4', '%5', '%6', '%7'];
-          $insertParams = [
-            1 => [(int)$contactID, "Integer"],
-            2 => [(int)$location, "Integer"],
-            3 => [(int)$primary, "Integer"],
-            4 => [$data['address_1'], "String"],
-            5 => [$data['address_4'], "String"],
-            6 => [$data['postcode'], "String"],
-            7 => [0, "Integer"],
+          $params = [
+            'contact_id' => $contactID,
+            'is_primary' => $data['is_primary'],
+            'location_type_id' => $location,
+            'street_address' => $data['address_1'],
+            'city' => $data['address_4'],
+            'postal_code' => $data['postcode'],
           ];
-          $index = 7;
-          $insert = "INSERT INTO civicrm_address (contact_id, location_type_id, is_primary, street_address,
-            city, postal_code, is_billing";
-          // optional fields, only add if there is data
-          if ($data['address_2'] <> '') {
-            $index++;
-            $insertParams[$index] = [$data['address_2'], "String"];
-            $insert .= ", supplemental_address_1";
-            $columns[] = "%" . $index;
+          if (isset($data['address_2']) && $data['address_2'] <> '') {
+            $params['supplemental_address_1'] = $data['address_2'];
           }
-          if ($data['address_3'] <> '') {
-            $index++;
-            $insertParams[$index] = [$data['address_3'], "String"];
-            $insert .= ", supplemental_address_2";
-            $columns[] = "%" . $index;
+          if (isset($data['address_3']) && $data['address_3'] <> '') {
+            $params['supplemental_address_2'] = $data['address_3'];
           }
-
-          if ($data['county']) {
+          if (isset($data['county']) && $data['county'] <> '') {
             $mappedCountyId = CRM_Nihrbackbone_NihrAddress::getCountyIdForSynonym($data['county']);
             if ($mappedCountyId) {
-              $index++;
-              $insertParams[$index] = [(int)$mappedCountyId, "Integer"];
-              $insert .= ", state_province_id";
-              $columns[] = "%" . $index;
+              $params['state_province_id'] = $mappedCountyId;
             }
           }
           if ($data['master_id'] <> '') {
-            $index++;
-            $insertParams[$index] = [$data['master_id'], "Integer"];
-            $insert .= ", master_id";
-            $columns[] = "%" . $index;
+            $params['master_id'] = $data['mater_id'];
           }
-          $insert .= ") VALUES(" . implode(", ", $columns) . ")";
+
           try {
-            CRM_Core_DAO::executeQuery($insert, $insertParams);
+            $result = civicrm_api3('Address', 'create', $params);
           } catch (CiviCRM_API3_Exception $ex) {
             $this->_logger->logMessage("addAddress $contactID " . $ex->getMessage(), 'ERROR');
           }
@@ -1245,11 +1194,21 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         // If contact_id exists for decypher id
         if($dependantId){
           // Get ID to be used as master_id (Links to guardians address ID)
-          $getAddressIdQuery = "SELECT id FROM civicrm_address WHERE contact_id=%1 AND street_address=%2 AND postal_code=%3 LIMIT 1";
+          // need to compare address line and postcode on lowercase without special chars
+          $address_1_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['address_1']));
+          $postcode_comp = preg_replace('/[^a-z0-9]/', '', strtolower($data['postcode']));
+
+          $getAddressIdQuery = "
+            SELECT id FROM civicrm_address
+            WHERE contact_id=%1
+            and REGEXP_REPLACE(LOWER(street_address), '[^a-z0-9]', '') = %2
+            and REGEXP_REPLACE(LOWER(postal_code), '[^a-z0-9]', '') = %3
+            LIMIT 1";
+
           $getAddressParams = [
             1 => [(int) $contactID, "Integer"],
-            2 => [$data['address_1'], "String"],
-            3 => [$data['postcode'], "String"]
+            2 => [$address_1_comp, "String"],
+            3 => [$postcode_comp, "String"]
           ];
           $masterId = CRM_Core_DAO::singleValueQuery($getAddressIdQuery, $getAddressParams);
           $this->_logger->logMessage("Adding new dependant address for guardian: ".$contactID . " Dependant id is ".$dependantId . " master id is ".$masterId, "INFO");

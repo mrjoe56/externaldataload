@@ -1,3 +1,8 @@
+## version 1.55
+* addAddress: fixed is_primary issue (as v1.54 for email and phone)
+* https://www.wrike.com/open.htm?id=1172459680 -
+  for CYP guardian address was not added to second/third child if spelt slightly different and not duplicated on guardian record
+
 ## version 1.54
 * addEmail, addPhone: use API call instead of direct insert (is_primary previously incorrectly set in some cases)
 
