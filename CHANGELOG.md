@@ -1,3 +1,6 @@
+## version 1.56
+* fixed version 1.55
+
 ## version 1.55
 * addAddress: fixed is_primary issue (as v1.54 for email and phone)
 * https://www.wrike.com/open.htm?id=1172459680 -

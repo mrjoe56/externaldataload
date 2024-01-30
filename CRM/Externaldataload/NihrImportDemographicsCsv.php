@@ -1168,7 +1168,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             }
           }
           if ($data['master_id'] <> '') {
-            $params['master_id'] = $data['mater_id'];
+            $params['master_id'] = $data['master_id'];
           }
 
           try {
