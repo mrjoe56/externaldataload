@@ -44,6 +44,7 @@ class CRM_Externaldataload_LoadAssent
           $assentVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getAssentDataCustomField('nbr_assent_version', 'id');
           $assentPisVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getAssentDataCustomField('nbr_assent_pis_version', 'id');
           $assentStatus = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getAssentDataCustomField('nbr_assent_status', 'id');
+          $assentObtained = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getAssentDataCustomField('nbr_assent_obtained', 'id');
 
           // assent not yet on Civi - add assent to case
           $assentDate = new DateTime($data['assent_date']);
@@ -59,6 +60,8 @@ class CRM_Externaldataload_LoadAssent
               $assentStatus => 'consent_form_status_correct',
               'case_id' => (int)$caseID,
               'subject' => $subject,
+              'details' => $data['assent_details'],
+              $assentObtained => $data['assent_obtained'],
             ]);
           } catch (CiviCRM_API3_Exception $ex) {
             $logger->logMessage('Error message when adding volunteer assent ' . $contactId . ' ' . $ex->getMessage(), 'error');

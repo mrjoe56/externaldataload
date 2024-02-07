@@ -45,6 +45,8 @@
   "assent_version": "assent_version",
   "assent_pis_version": "assent_pis_version",
   "assent_date": "assent_date",
+  "assent_obtained": "assent_obtained",
+  "assent_details": "assent_details",
   "opt_in_to_gel_ngrl": "opt_in_to_gel_ngrl",
 
   "invite_type": "invite_type",

@@ -1,3 +1,6 @@
+## version 1.57
+* added new fields for assent upload (PIBD)
+
 ## version 1.56
 * fixed version 1.55
 
