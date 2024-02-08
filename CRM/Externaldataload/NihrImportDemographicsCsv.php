@@ -1345,7 +1345,29 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     if (isset($aliasType) && $aliasType <> '') // todo add check if aliasType exists
     {
       if (isset($externalID) && $externalID <> '') {
-        $doInsert = 0;
+          // todo check if nhs number format is correct (subroutine to be written by JB)
+          if ($aliasType == 'cih_type_nhs_number') {
+              $nhsNumberError=\CRM_Nihrbackbone_NihrValidation::validateNHSNumber($externalID);
+              if ($nhsNumberError != NULL) {
+                  \Civi::log()->info("NHS number error is ".$nhsNumberError);
+                  $this->_logger->logMessage("Contact ID $contactID: NHS number ".$externalID . " is invalid. Error is :".$nhsNumberError , 'WARNING');
+                  return;
+              }
+              $existingNhsNumbers = civicrm_api4('Custom_contact_id_history', 'get', [
+                  'where' => [
+                      ['id_history_entry_type', '=', 'cih_type_nhs_number'],
+                      ['id_history_entry', '=', $externalID],
+                  ],
+              ]);
+              $nhsNumCount = $existingNhsNumbers->count();
+              if ($nhsNumCount > 0) {
+                  $this->_logger->logMessage("Contact ID $contactID: NHS number ".$externalID . " is a duplicate" , 'WARNING');
+              }
+
+
+          }
+
+         $doInsert = 0;
 
         $table = Civi::service('nbrBackbone')->getContactIdentityTableName();
         $identifierColumn = Civi::service('nbrBackbone')->getIdentifierColumnName();
@@ -1378,9 +1400,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
           $cnt2 = CRM_Core_DAO::singleValueQuery($query2, $queryParams2);
 
           if ($cnt2 == 0) {
-            if ($aliasType == 'cih_type_nhs_number') {
-              // todo check if nhs number format is correct (subroutine to be written by JB)
-            }
+
             if ($update == 0) {
               $this->_logger->logMessage("Contact ID $contactID: different identifier for $aliasType provided, not updated.", 'WARNING');
             } elseif ($update == 1) {
