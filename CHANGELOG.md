@@ -1,3 +1,7 @@
+## version 1.58
+
+* Added NHS number validation to importdemographics csv (Requires version 2.57 of nihrbackbone) (https://www.wrike.com/open.htm?id=1294854474)
+
 ## version 1.57
 * added new fields for assent upload (PIBD)
 
