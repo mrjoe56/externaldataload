@@ -1357,7 +1357,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
                   'where' => [
                       ['id_history_entry_type', '=', 'cih_type_nhs_number'],
                       ['id_history_entry', '=', $externalID],
+                      ['entity_id', '!=', $contactID],
+
                   ],
+                  'checkPermissions' => FALSE
+
               ]);
               $nhsNumCount = $existingNhsNumbers->count();
               if ($nhsNumCount > 0) {
