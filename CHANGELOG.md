@@ -1,9 +1,11 @@
-## version 1.59
+## version 1.60
+* give warning if any of the headers in the upload file is not part of the default mapping
+* added "cih_type_leicester" for Leicester data load (one-off, use datasource imid or nafld)
 
+## version 1.59
 *Fixed bug in nhs validation function  (Requires version 2.57 of nihrbackbone) (https://www.wrike.com/open.htm?id=1294854474)
 
 ## version 1.58
-
 * Added NHS number validation to importdemographics csv (Requires version 2.57 of nihrbackbone) (https://www.wrike.com/open.htm?id=1294854474)
 
 ## version 1.57

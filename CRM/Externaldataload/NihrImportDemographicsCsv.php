@@ -135,6 +135,13 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       // todo check on panel, centre and site
       $this->_logger->logMessage('panel missing for ' . $this->_dataSource . ' data not loaded', 'ERROR');
     } else {
+      // give warning if any of the headers in the upload file is not part of the default mapping
+      foreach ($this->_columnHeaders as $col) {
+        if (!in_array($col, array_keys($this->_mapping))) {
+          $this->_logger->logMessage('Header not part of default mapping, data not uploaded: ' . $col, 'WARNING');
+        }
+      }
+
       $this->importDemographics();
     }
     fclose($this->_csv);
@@ -271,6 +278,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
           if (isset($data['previous_names']) && !empty($data['previous_names'])) {
             $this->addAlias($contactId, 'cih_type_former_surname', $data['previous_names'], 2);
+          }
+
+          // Leicester
+          if (!empty($data['cih_type_leicester']))  {
+            $this->addAlias($contactId, 'cih_type_leicester', $data['cih_type_leicester'], 2);
           }
 
           // Rare migration
