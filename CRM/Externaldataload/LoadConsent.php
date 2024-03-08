@@ -21,7 +21,7 @@ class CRM_Externaldataload_LoadConsent
    * @param $logger
    * @throws Exception
    */
-  public function addConsent($contactId, $caseID, $consentStatus, $subject, $data, $logger)
+  public function addConsent($contactId, $caseID, $consentStatus, $subject, &$data, $logger)
   {
     // caseID cannot be empty, a consent is always linked to a case
     if ($caseID == '') {
@@ -40,7 +40,10 @@ class CRM_Externaldataload_LoadConsent
       }
       if ($existingConsentVersion) {
         $consentDate = date('Y-m-d', strtotime($data['consent_date']));
-        if ($this->countExistingConsent($contactId, $consentDate, $data['information_leaflet_version'], $data['consent_version']) == 0) {
+
+        // check if consent already stored on the volunteer record
+        $res = $this->countExistingConsent($contactId, $consentDate, $data['information_leaflet_version'], $data['consent_version']);
+        if ($res == 0) {
           $consentVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consent_version', 'id');
           $informationLeafletVersion = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_information_leaflet_version', 'id');
           $consentStatusField = 'custom_' . CRM_Nihrbackbone_BackboneConfig::singleton()->getVolunteerConsentCustomField('nvc_consent_status', 'id');
@@ -103,9 +106,18 @@ class CRM_Externaldataload_LoadConsent
               $assentFormCompleted => $data['assent_form_completed'],
               $optInToGelNgrl => $data['opt_in_to_gel_ngrl'],
             ]);
+
+            if (isset($result2['id'])) {
+              // keep ID to add panel/consent and PackID/consent relationship to database
+              $data['consent_id'] = $result2['id'];
+            }
           } catch (CiviCRM_API3_Exception $ex) {
             $logger->logMessage('Error message when adding volunteer consent ' . $contactId . ' ' . $ex->getMessage(), 'error');
           }
+        }
+        else {
+          // consent already on orca - keep activity ID nevertheless to created the panel/consent/Pack ID links (migration only)
+          $data['consent_id'] = $res;
         }
       }
     }
@@ -158,11 +170,11 @@ class CRM_Externaldataload_LoadConsent
    * @param $consentVersion
    * @return string|null
    */
-  public function countExistingConsent($contactId, $consentDate, $leafletVersion, $consentVersion) {
+  public function countExistingConsent($contactId, $consentDate, $leafletVersion, $consentVersion): int {
     $tableName = Civi::service('nbrBackbone')->getConsentTableName();
     $consentVersionColumn = Civi::service('nbrBackbone')->getConsentVersionColumnName();
     $leafletVersionColumn = Civi::service('nbrBackbone')->getLeafletVersionColumnName();
-    $countQuery = "SELECT COUNT(*)
+    $countQuery = "SELECT ifnull(min(a.id), 0)
             FROM civicrm_activity AS a
                 JOIN civicrm_activity_contact AS b ON a.id = b.activity_id AND b.record_type_id = %1
                 LEFT JOIN " . $tableName . " AS c ON a.id = c.entity_id
@@ -181,5 +193,4 @@ class CRM_Externaldataload_LoadConsent
     ];
     return CRM_Core_DAO::singleValueQuery($countQuery, $countParams);
   }
-
 }

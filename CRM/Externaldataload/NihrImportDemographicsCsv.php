@@ -209,25 +209,26 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
         CRM_Core_DAO::disableFullGroupByMode();
         // add volunteer or update data of existing volunteer
-        [$contactId, $dataStored, $new_volunteer, $project_identifier] = $this->addContact($data);
+        [$contactId, $dataStored, $new_volunteer, $updateContactDetails, $project_identifier] = $this->addContact($data);
         CRM_Core_DAO::reenableFullGroupByMode();
         // data is not stored if no local identifier is given or if the existing volunteer has a status
         // other than active or pending
         if ($dataStored) {
-          $this->addEmail($contactId, $data);
-          $this->addAddress($contactId, $data);
-          //$this->addPhone($contactId, $data, 'phone_home', Civi::service('nbrBackbone')->getHomeLocationTypeId(), CRM_Nihrbackbone_BackboneConfig::singleton()->getPhonePhoneTypeId());
-          //$this->addPhone($contactId, $data, 'phone_work', Civi::service('nbrBackbone')->getWorkLocationTypeId() , CRM_Nihrbackbone_BackboneConfig::singleton()->getPhonePhoneTypeId());
-          //$this->addPhone($contactId, $data, 'phone_mobile', Civi::service('nbrBackbone')->getHomeLocationTypeId(), CRM_Nihrbackbone_BackboneConfig::singleton()->getMobilePhoneTypeId());
-
-          if (isset($data['contact_category']) && $data['contact_category'] == 'Phone') {
-            $this->addPhone($contactId, $data, 'phone', $data['contact_location'], $data['contact_phone_type'], $data['is_primary']);
+          if ($updateContactDetails) {
+            $this->addEmail($contactId, $data);
+            $this->addAddress($contactId, $data);
+            if (isset($data['contact_category']) && $data['contact_category'] == 'Phone') {
+              $this->addPhone($contactId, $data, 'phone', $data['contact_location'], $data['contact_phone_type'], $data['is_primary']);
+            }
+          }
+          else {
+            $this->_logger->logMessage('Volunteer ' . $project_identifier . ' not active or pending, contact details not updated.', 'WARNING');
           }
 
           $this->addNote($contactId, $data['notes'], $data['notes_date']);
 
           if ($data['panel'] <> '' || $data['site'] <> '' || $data['centre'] <> '') {
-            $this->addPanel($contactId, $data['panel'], $data['site'], $data['centre'], $data['source'], $this->_dataSource);
+            $this->addPanel($contactId, $data, $this->_dataSource);
           }
 
           // *** Aliases ***
@@ -510,6 +511,11 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
             $this->addRecruitmentCaseActivity($contactId, $data['rec_activity'], $data['rec_activity_datetime'],
               $data['rec_activity_subject'], $data['rec_activity_status'], $data['rec_activity_location']);
           }
+
+          // panel/consent and packID/consent linkage
+          if(isset($data['consent_id']) && $data['consent_id'] <> '') {
+            $this->addLink($contactId, $data['consent_id'], $data['cih_type_packid'], $data['panel_id']);
+          }
         }
       }
     }
@@ -760,6 +766,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   {
     $new_volunteer = 1;
     $storeData = 1;
+    $updateContactDetails = 1;
 
     // todo move to volunteer class (?)
 
@@ -949,16 +956,24 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
 
       if ($contactId) {
         // volunteer already exists
-        // do not save data if volunteer is not active or pending
+
+        if ($this->requestsToDestroyData($contactId, $this->_logger))
+        {
+          // do not save data if volunteer asked us to destroy their data
+          $this->_logger->logMessage('volunteer ' . $identifier . ' (' . $contactId .
+            ') requested their data to be destroyed, no data loaded', 'WARNING');
+          return array(0, 0, 0, 0, $identifier);
+        }
+
         if (!$volunteer->VolunteerStatusActiveOrPending($contactId, $this->_logger) &&
           $this->_dataSource != 'rare_migration' &&
           $this->_dataSource != 'cns' &&
           // slam: 'consent outdate' should be added to the function in the backbone; this is
           // a shortcut to upload one-off legacy slam data
           $this->_dataSource != 'slam') {
-          $this->_logger->logMessage('volunteer ' . $identifier . ' (' . $contactId .
-            ') has status other than active or pending, no data loaded', 'WARNING');
-          return array(0, 0, 0, $identifier);
+
+          // don't update contact details for deceased, redundant, withdrawn, not recruited volunteers
+          $updateContactDetails = 0;
         }
 
         $data['id'] = $contactId;
@@ -1003,7 +1018,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         // ... but not for HLQ data (as this might be linked to withdrawn volunteers but not deleted from the cum file)
         if ($this->_createRecord == 0) {
           $this->_logger->logMessage("$identifier: ID does not exist on the database, no data loaded", 'WARNING');
-          return array(0, 0, 0, $identifier);
+          return array(0, 0, 0, 0, $identifier);
         }
 
         // for records with missing names (e.g. loading from sample receipts) a fake first name and surname needs to be added
@@ -1057,7 +1072,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $this->_logger->logMessage('local identifier missing, data not loaded ' . $data['last_name'], 'ERROR');
       $storeData = 0;
     }
-    return array($contactId, $storeData, $new_volunteer, $identifier);
+    return array($contactId, $storeData, $new_volunteer, $updateContactDetails, $identifier);
   }
 
   /**
@@ -1655,31 +1670,29 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
   /**
    * Method to add panel
    * @param $contactID
-   * @param $panel
-   * @param $site
-   * @param $centre
+   * @param &$data
    * @param $source
    */
-  private function addPanel($contactID, $panel, $site, $centre, $source, $dataSource)
+  private function addPanel($contactID, &$data, $dataSource)
   {
     //
     // ---
 
-    if ($panel == 'IBD Main' || $panel == 'IBD Inception') {
+    if ($data['panel'] == 'IBD Main' || $data['panel'] == 'IBD Inception') {
       $siteAliasTypeValue = "nbr_site_alias_type_ibd";
-    } elseif ($panel == 'STRIDES') {
+    } elseif ($data['panel'] == 'STRIDES') {
       $siteAliasTypeValue = "nbr_site_alias_type_strides";
-    } elseif ($panel == 'PIBD'  || $panel == 'PIBD Inception') {
+    } elseif ($data['panel'] == 'PIBD'  || $data['panel'] == 'PIBD Inception') {
       $siteAliasTypeValue = "nbr_site_alias_type_pibd";
     }
 
     $panelData = [];
     // *** centre/panel/site: usually two of each are set per record, all of them are contact organisation
     // *** records; check if given values are on the - if any is missing do not insert any 'panel' data
-    if (isset($panel) && !empty($panel)) {
-      $panelID = $this->getIdCentrePanelSite('panel', $panel);
+    if (isset($data['panel']) && !empty($data['panel'])) {
+      $panelID = $this->getIdCentrePanelSite('panel', $data['panel']);
       if (!$panelID) {
-        $this->_logger->logMessage('Panel does not exist on database: ' . $panel, 'ERROR');
+        $this->_logger->logMessage('Panel does not exist on database: ' . $data['panel'], 'ERROR');
         return;
       }
       $panelData['panel_id'] = $panelID;
@@ -1687,10 +1700,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $panelData['panel_id'] = '';
     }
 
-    if (isset($centre) && !empty($centre)) {
-      $centreID = $this->getIdCentrePanelSite('centre', $centre);
+    if (isset($data['centre']) && !empty($data['centre'])) {
+      $centreID = $this->getIdCentrePanelSite('centre', $data['centre']);
       if (!$centreID) {
-        $this->_logger->logMessage('Centre does not exist on database: ' . $centre, 'ERROR');
+        $this->_logger->logMessage('Centre does not exist on database: ' . $data['centre'], 'ERROR');
         return;
       }
       $panelData['centre_id'] = $centreID;
@@ -1698,10 +1711,10 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       $panelData['centre_id'] = '';
     }
 
-    if (isset($site) && !empty($site)) {
-      $siteID = $this->getIdCentrePanelSite('site', $site, $siteAliasTypeValue);
+    if (isset($data['site']) && !empty($data['site'])) {
+      $siteID = $this->getIdCentrePanelSite('site', $data['site'], $siteAliasTypeValue);
       if (!$siteID) {
-        $this->_logger->logMessage('Site does not exist on database: ' . $site, 'ERROR');
+        $this->_logger->logMessage('Site does not exist on database: ' . $data['site'], 'ERROR');
         return;
       }
       $panelData['site_id'] = $siteID;
@@ -1735,7 +1748,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
         $panelData['source'] = '';
       }
 
-      $this->insertPanel($panelData);
+      $this->insertPanel($panelData, $data);
     }
   }
 
@@ -1744,7 +1757,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
    *
    * @param $panelData
    */
-  private function insertPanel($panelData)
+  private function insertPanel($panelData, &$data)
   {
     $table = Civi::service('nbrBackbone')->getVolunteerPanelTableName();
     $centreColumn = Civi::service('nbrBackbone')->getVolunteerCentreColumnName();
@@ -1753,7 +1766,7 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     $sourceColumn = Civi::service('nbrBackbone')->getVolunteerSourceColumnName();
 
     // check if panel already exists
-    $query = "select count(*)
+    $query = "select ifnull(min(id), 0)
                 from " . $table . "
                 where entity_id = %1
                 and if (%2 = '', " . $panelColumn . " is null,  " . $panelColumn . " = %2)
@@ -1766,8 +1779,8 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       3 => [(int)$panelData['centre_id'], "Integer"],
       4 => [(int)$panelData['site_id'], "Integer"],
     ];
-    $count = CRM_Core_DAO::singleValueQuery($query, $queryParams);
-    if ($count == 0) {
+    $id = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+    if ($id == 0) {
 
       // +++
       $queryParams = [
@@ -1807,7 +1820,23 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
       }
 
       $query = $query . ") " . $query2 . ")";
-      CRM_Core_DAO::executeQuery($query, $queryParams);
+      try {
+        CRM_Core_DAO::executeQuery($query, $queryParams);
+      } catch (CiviCRM_API3_Exception $ex) {
+        $this->_logger->logMessage('Failed to add volunteer panel for '.$panelData['contact_id'].': '. $ex->getMessage(), 'error');
+      }
+
+      try {
+        $last_id = CRM_Core_DAO::singleValueQuery('select LAST_INSERT_ID();', null);
+        // keep ID to add panel/consent relationship to database
+        $data['panel_id'] = $last_id;
+      } catch (CiviCRM_API3_Exception $ex) {
+        $this->_logger->logMessage('Failed to retrieve panel_id for ' . $panelData['contact_id'].': '. $ex->getMessage(), 'error');
+      }
+    }
+    else {
+      // panel already on orca - keep ID nevertheless to created the panel/consent/Pack ID links (migration only)
+      $data['panel_id'] = $id;
     }
   }
 
@@ -2438,6 +2467,112 @@ class CRM_Externaldataload_NihrImportDemographicsCsv
     }
     return $id;
   }
+
+
+  private function requestsToDestroyData ($id, $logger)
+  {
+      $sql = "
+          select ifnull(max(w.avw_request_to_destroy_data), 0) + ifnull(max(r.avr_request_to_destroy_data), 0)
+          from civicrm_activity_contact ac
+          left join civicrm_value_nihr_volunteer_withdrawn w
+          on w.entity_id = ac.activity_id
+          left join civicrm_value_nihr_volunteer_redundant r
+          on r.entity_id = ac.activity_id
+          where ac.contact_id = %1";
+
+      $queryParams = [
+        1 => [$id, 'Integer']
+      ];
+
+      try {
+        return CRM_Core_DAO::singleValueQuery($sql, $queryParams);
+      }
+      catch (Exception $ex) {
+        $logger->logMessage('select requestsToDestroyData failed for ' . $id);
+        return 1;
+      }
+  }
+
+
+  private function addLink($contactId, $consentId, $packId, $panelId)
+  {
+    // *** consent - packID link
+
+    if ($consentId <> '' && $packId <> '') {
+      // only add if not already on volunteer record
+      $query = "
+        select count(*)
+        from civicrm_consent_pack_link
+        where contact_id = %1
+        and activity_id = %2
+        and pack_id = %3";
+
+      $queryParams = [
+        1 => [(int)$contactId, "Integer"],
+        2 => [(int)$consentId, "Integer"],
+        3 => [$packId, "String"],
+      ];
+
+      try {
+        $cnt = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+      }
+      catch (Exception $ex) {
+        $this->_logger->logMessage('select cnt addLink failed for ' . $contactId, 'error');
+      }
+      if ($cnt == 0) {
+        $insert = "INSERT INTO civicrm_consent_pack_link (contact_id, activity_id, pack_id) VALUES(%1, %2, %3)";
+        $insertParams = [
+          1 => [(int)$contactId, "Integer"],
+          2 => [(int)$consentId, "Integer"],
+          3 => [$packId, "String"],
+        ];
+        try {
+          CRM_Core_DAO::executeQuery($insert, $insertParams);
+        }
+        catch (Exception $ex) {
+          $this->_logger->logMessage('cannot add consent/packID link for ' . $contactId, 'error');
+        }
+      }
+    }
+
+    // ** consent - panel link
+
+    if ($consentId <> '' && $panelId <> '') {
+      // only add if not already on volunteer record
+      $query = "
+        select count(*)
+        from civicrm_consent_panel_link
+        where contact_id = %1
+        and activity_id = %2
+        and panel_etc_id = %3";
+
+      $queryParams = [
+        1 => [(int)$contactId, "Integer"],
+        2 => [(int)$consentId, "Integer"],
+        3 => [(int)$panelId, "Integer"],
+      ];
+
+      try {
+        $cnt = CRM_Core_DAO::singleValueQuery($query, $queryParams);
+      } catch (Exception $ex) {
+        $this->_logger->logMessage('select cnt2 addLink failed for ' . $contactId, 'error');
+      }
+      if ($cnt == 0) {
+        $insert = "INSERT INTO civicrm_consent_panel_link (contact_id, activity_id, panel_etc_id) VALUES(%1, %2, %3)";
+        $insertParams = [
+          1 => [(int)$contactId, "Integer"],
+          2 => [(int)$consentId, "Integer"],
+          3 => [(int)$panelId, "Integer"],
+        ];
+        try {
+          CRM_Core_DAO::executeQuery($insert, $insertParams);
+        } catch (Exception $ex) {
+          $this->_logger->logMessage('cannot add consent/panel link for ' . $contactId, 'error');
+        }
+      }
+    }
+  }
+
 
   public function addRelationship($contactId, $contact2, $relationshipType)
   {

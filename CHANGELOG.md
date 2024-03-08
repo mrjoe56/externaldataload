@@ -1,3 +1,7 @@
+## version 1.61
+* update (some of the) data for volunteers with statuses other than pending and active who did not ask their data to be destroyed
+* include links for panel/consent and packID/consent (newly added data and migration - latter can be removed for performance reasons after first upload)
+
 ## version 1.60
 * give warning if any of the headers in the upload file is not part of the default mapping
 * added "cih_type_leicester" for Leicester data load (one-off, use datasource imid or nafld)
